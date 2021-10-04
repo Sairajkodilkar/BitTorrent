@@ -57,7 +57,8 @@ headers= {
         "downloaded":"0",
         "left":"2820000000"}
 
-GET_REQUEST = ( "GET /announce?info_hash={}&peer_id=12345678911234567890&port=8080&uploaded=0&downloaded=0&left=2820000000 HTTP/1.1\r\n".format(encoded) +\
+GET_REQUEST = ( "GET
+        /announce?info_hash={}&peer_id=12345678911234567890&port=8080&uploaded=0&downloaded=0&left=2820000000&compact=1 HTTP/1.1\r\n".format(encoded) +\
                 "Host: torrent.ubuntu.com\r\n" +\
                 "peer_id: 12345678901234567890\r\n" +\
                 "port: 8082\r\n" +\

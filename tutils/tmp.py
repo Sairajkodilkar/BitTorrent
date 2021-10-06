@@ -51,26 +51,26 @@ def createurl(info_hash):
 
 
 headers= {
-        "Info_hash":encoded,
-        "peer_id":"12345678901234567890",
+        "info_hash":bytes.fromhex(Info_hash),
+        "peer_id":"2345678901234567890",
+        "port":"8080",
         "uploaded":"0",
         "downloaded":"0",
-        "left":"2820000000"}
+        "left":"2820000000",
+        "compact":"0"}
 
-GET_REQUEST = ( "GET
-        /announce?info_hash={}&peer_id=12345678911234567890&port=8080&uploaded=0&downloaded=0&left=2820000000&compact=1 HTTP/1.1\r\n".format(encoded) +\
-                "Host: torrent.ubuntu.com\r\n" +\
-                "peer_id: 12345678901234567890\r\n" +\
-                "port: 8082\r\n" +\
-                "uploaded: 0\r\n" + "downloaded: 0\r\n" +\
-                "left: 2820000000\r\n\r\n").encode()
+scraper = "https://torrent.ubuntu.com/scraper"
 
-'''
+GET_REQUEST = ( "GET /announce?info_hash={}&peer_id=2345678911234567890&port=8080&uploaded=0&downloaded=0&left=2820000000&event=started HTTP/1.1\r\n".format(encoded) +\
+                "Host: torrent.ubuntu.com\r\n\r\n").encode()
 url = "https://torrent.ubuntu.com/announce"
 r = requests.get(url, params=headers)
+print(r.headers)
 print(r.url)
-print(r.text)
-'''
+print(r.status_code)
+print(GET_REQUEST)
+print(r.content)
+gets = "GET {}?info_hash={} HTTP/1.1\r\nHost:torrent.ubuntu.com\r\n\r\n".format(scraper, encoded)
 client("torrent.ubuntu.com", 443, GET_REQUEST)
 
 

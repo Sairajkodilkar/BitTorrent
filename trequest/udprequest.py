@@ -1,19 +1,22 @@
-class ConnectionRequestPacket:
+from packet import make_pkt
+from pkt_format import *
+
+def paketize_connection_req:
     pass
 
-class ConnectionResponsePacket:
+def unpaketize_connection_res:
     pass
 
-class AnnounceRequestPacket:
+class packetize_announce_req:
     pass
 
-class AnnounceResponsePacket:
+class unpacketize_announce_res:
     pass
 
-class ScrapRequestPacket:
+class packetize_scrap_req:
     pass
 
-class ScrapResponsePacket:
+class unpacketize_announce_res:
     pass
 
 class UDPRequest:
@@ -22,7 +25,7 @@ class UDPRequest:
         self.address = address
 
     def connect(self, transaction_id):
-        return dictionar of transaction_id_by_server, connection_id
+        return dictionary of transaction_id_by_server, connection_id
 
     def announce(self, connection_id, transaction_id, info_hash, peer_id,
             downloaded, left, uploaded, port, key, event=0, IP_address=0, num_want =

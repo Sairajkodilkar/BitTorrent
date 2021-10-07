@@ -2,6 +2,7 @@ import ssl
 import socket
 import requests
 import urllib
+import bdencoder
 
 '''
 GET_REQUEST = ("GET /announce HTTP/1.1\r\n" +\
@@ -52,12 +53,11 @@ def createurl(info_hash):
 
 headers= {
         "info_hash":bytes.fromhex(Info_hash),
-        "peer_id":"2345678901234567890",
+        "peer_id":"12345678901234567890",
         "port":"8080",
         "uploaded":"0",
         "downloaded":"0",
-        "left":"2820000000",
-        "compact":"0"}
+        "left":"2820000000"}
 
 scraper = "https://torrent.ubuntu.com/scraper"
 
@@ -65,12 +65,32 @@ GET_REQUEST = ( "GET /announce?info_hash={}&peer_id=2345678911234567890&port=808
                 "Host: torrent.ubuntu.com\r\n\r\n").encode()
 url = "https://torrent.ubuntu.com/announce"
 r = requests.get(url, params=headers)
+'''
 print(r.headers)
 print(r.url)
 print(r.status_code)
 print(GET_REQUEST)
 print(r.content)
+'''
+
+print(r.content)
+decoder = bdencoder.Bdecoder(r.content, "b")
+x = decoder.decode()
+peers = x[0][b'peers']
+print(peers)
+
+'''
+i = 0
+while(i < len(peers)):
+    ip = peers[i:i+4]
+    port = peers[i+4:i+6]
+    print(socket.inet_ntoa(ip), int.from_bytes(port, "big"))
+    i += 6
+
+'''
+
+
 gets = "GET {}?info_hash={} HTTP/1.1\r\nHost:torrent.ubuntu.com\r\n\r\n".format(scraper, encoded)
-client("torrent.ubuntu.com", 443, GET_REQUEST)
+#client("torrent.ubuntu.com", 443, GET_REQUEST)
 
 

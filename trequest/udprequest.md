@@ -66,6 +66,13 @@ Offset      Size            Name            Value
 16 + 12 * n 32-bit integer  leechers
 8 + 12 * N
 
+error response:
+
+Offset  Size            Name            Value
+0       32-bit integer  action          3 // error
+4       32-bit integer  transaction_id
+8       string  message
+
 Actions:
     0: connect
     1: announce

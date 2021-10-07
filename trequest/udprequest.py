@@ -1,5 +1,3 @@
-from packet import * 
-
 class ConnectionRequestPacket:
     pass
 

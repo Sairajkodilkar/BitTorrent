@@ -30,39 +30,40 @@ class PacketizationError(Exception):
         super().__init__(*args, **kwargs)
 
 def paketize_connection_req(transaction_id):
+
     pkt_content = [CONNECTION_PROTOCOL_ID, Action.CONNECT, transaction_id]
     packet_structure = tuple(zip(pkt_content, CONNECTION_REQUEST_FORMAT))
 
-    print(make_pkt(packet_structure))
     return make_pkt(packet_structure)
 
 
 def packetize_announce_req(connection_id, transaction_id, info_hash,
                             peer_id, downloaded, left,
                             uploaded, port, key,
-                            event=0, ip_address=0, num_want=-1):
+                            event, ip_address, num_want):
+
     pkt_content = [
                     connection_id, Action.ANNOUNCE, transaction_id,
                     info_hash, peer_id, downloaded, 
                     left, uploaded, event,
                     ip_address, key, num_want, port
                 ]
-    packet_structure = zip(pkt_content, ANNOUNCE_REQUEST_FORMAT)
+    packet_structure = tuple(zip(pkt_content, ANNOUNCE_REQUEST_FORMAT))
 
-    return make_pkt(packet_structure)
+    return tuple(make_pkt(packet_structure))
 
 def packetize_scrap_req(connection_id, transaction_id, info_hash):
+
     pkt_content = [connection_id, Action.SCRAPE, transaction_id, info_hash]
-    packet_structure = zip(pkt_content, SCRAPE_REQEST_FORMAT)
+    packet_structure = tuple(zip(pkt_content, SCRAPE_REQEST_FORMAT))
 
     return make_pkt(packet_structure)
 
 
-def unpaketize_request(packet):
-    action, transaction_id, payload = decode_pkt(
-                                                packet, 
+def unpaketize_response(packet):
+    
+    action, transaction_id, payload = decode_pkt(packet, 
                                                 RESPONSE_HEADER_FORMAT)
-    print(action, transaction_id, payload, Action.CONNECT)
     response = None
     if(action == Action.CONNECT):
         response = decode_pkt(payload, CONNECTION_RESPONSE_FORMAT)

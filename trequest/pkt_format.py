@@ -29,7 +29,7 @@ ANNOUNCE_REQUEST_FORMAT = [
         PacketFormat.INTEGER,       #IP address     0 default/IPv6
         PacketFormat.INTEGER,       #key            
         PacketFormat.INTEGER,       #num_want       -1 
-        PacketFormat.SHORT          #port
+        PacketFormat.SHORT          #port           //What is use ofthis?typically 6881-6889 
     ]
 
 ANNOUNCE_RESPONSE_FORMAT = [

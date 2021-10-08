@@ -1,13 +1,13 @@
-from packet import PacketFormat, make_pkt
+from packet import PacketFormat 
 
 RESPONSE_HEADER_FORMAT = [
-        PacketFormat.INTEGER,       #action         0 
+        PacketFormat.INTEGER,       #action         
         PacketFormat.INTEGER,       #transaction_id
         -1
     ]
 
 CONNECTION_REQUEST_FORMAT = [
-        PACKETFORMAT.LONG_LONG,     #protocol_id    0x41727101980
+        PacketFormat.LONG_LONG,     #protocol_id    0x41727101980
         PacketFormat.INTEGER,       #action         0
         PacketFormat.INTEGER        #transaction_id
     ]

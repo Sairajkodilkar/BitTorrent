@@ -1,6 +1,10 @@
-from packet import make_pkt
+from packet import make_pkt, decode_pkt
 from pkt_format import *
+import sys
 
+#TODO: Check the given argument is of expected bits
+
+#magic constant
 CONNECTION_PROTOCOL_ID = 0x41727101980
 
 class Action:
@@ -27,28 +31,11 @@ class PacketizationError(Exception):
 
 def paketize_connection_req(transaction_id):
     pkt_content = [CONNECTION_PROTOCOL_ID, Action.CONNECT, transaction_id]
-    packet_structure = zip(CONNECTION_REQUEST_FORMAT, pkt_content)
+    packet_structure = tuple(zip(pkt_content, CONNECTION_REQUEST_FORMAT))
 
+    print(make_pkt(packet_structure))
     return make_pkt(packet_structure)
 
-
-def unpaketize_request(packet):
-    action, transaction_id, payload = decode_pkt(
-                                                packet, 
-                                                RESPONSE_HEADER_FORMAT)
-    response = None
-    if(action == Action.CONNECT):
-        response = decode_pkt(payload, CONNECTION_RESPONSE_FORMAT)
-    if(action == Action.ANNOUNCE):
-        response = decode_pkt(payload, ANNOUNCE_RESPONSE_FORMAT)
-    if(action == Action.SCRAPE):
-        response = decode_pkt(payload, SCRAPE_RESPONSE_FORMAT)
-    elif(action == Action.ERROR):
-        response = decode_pkt(packet, ERROR_RESPONSE_FORMAT)
-    else:
-        raise UnpacketizationError("Invalid response type")
-
-    return action, transaction_id, response
 
 def packetize_announce_req(connection_id, transaction_id, info_hash,
                             peer_id, downloaded, left,
@@ -70,4 +57,23 @@ def packetize_scrap_req(connection_id, transaction_id, info_hash):
 
     return make_pkt(packet_structure)
 
+
+def unpaketize_request(packet):
+    action, transaction_id, payload = decode_pkt(
+                                                packet, 
+                                                RESPONSE_HEADER_FORMAT)
+    print(action, transaction_id, payload, Action.CONNECT)
+    response = None
+    if(action == Action.CONNECT):
+        response = decode_pkt(payload, CONNECTION_RESPONSE_FORMAT)
+    elif(action == Action.ANNOUNCE):
+        response = decode_pkt(payload, ANNOUNCE_RESPONSE_FORMAT)
+    elif(action == Action.SCRAPE):
+        response = decode_pkt(payload, SCRAPE_RESPONSE_FORMAT)
+    elif(action == Action.ERROR):
+        response = decode_pkt(packet, ERROR_RESPONSE_FORMAT)
+    else:
+        raise UnpacketizationError("Invalid response type")
+
+    return action, transaction_id, *response
 

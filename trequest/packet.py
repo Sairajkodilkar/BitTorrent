@@ -24,19 +24,19 @@ class PacketStructureError(Exception):
 
 def make_pkt(packet_structure):
 
-    if(not isinstance(packet_structure, dict)):
-        raise PacketStructureError("Wrong Packet structure, expected dict")
+    #TODO:handle tuple of tuple
+    if(not isinstance(packet_structure, tuple)):
+        raise PacketStructureError("Wrong Packet structure, expected tuple")
 
     packet = b''
     #TODO: change key, value names to the sensible names
-    for key, value in packet_structure.items():
+    for key, value in packet_structure:
         if(value not in PacketFormat()):
             raise PacketStructureError("Invalid format specifier")
 
         elif(isinstance(value, PacketFormat.BYTES_SIZE_TYPE)):
             if(not isinstance(key, bytes)):
-                raise PacketStructureError("Invalid key type, \
-                                            expected bytes object")
+                raise PacketStructureError("Invalid key type, expected bytes object")
             packet += key
 
         else:

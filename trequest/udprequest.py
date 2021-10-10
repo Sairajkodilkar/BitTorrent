@@ -2,6 +2,8 @@ from packetization import *
 from pkt_format import Action, Event
 import socket
 
+import struct
+
 class TrackerTimeoutError(Exception):
     
     def __init__(self, *args, **kwargs):
@@ -54,17 +56,19 @@ class UDPRequest:
         #       pktformatting
 
         scrape_req_packet = packetize_scrap_req(connection_id, 
-                                                action,
                                                 transaction_id,
                                                 info_hash)
 
+        print("sending", self.tracker_address, scrape_req_packet, hex(connection_id))
         #TODO: take care of return value
         self.make_request(scrape_req_packet)
+        print("unpacking", struct.unpack("!q", scrape_req_packet[0:8]))
 
         #TODO: check weather the packet is at least 8 byte
         scrape_res_packet, address = self.get_response()
+        print("recvd", scrape_res_packet)
         #TODO: check action number
-        scrape_res = unpaketize_response(scrape_req_packet)
+        scrape_res = unpaketize_response(scrape_res_packet)
         return scrape_res
 
     def make_request(self, req_packet):

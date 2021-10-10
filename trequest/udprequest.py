@@ -1,4 +1,5 @@
 from packetization import *
+from pkt_format import Action, Event
 import socket
 
 class TrackerTimeoutError(Exception):
@@ -24,11 +25,12 @@ class UDPRequest:
         self.make_request(connection_req_packet)
 
         #TODO: check action number 
+        #TODO: check weather the packet is at least 16 bytes
         connection_res_packet, address = self.get_response()
         connection_res = unpaketize_response(connection_res_packet)
         return connection_res
 
-    def announce(connection_id, transaction_id, info_hash,
+    def announce(self, connection_id, transaction_id, info_hash,
                 peer_id, downloaded, left,
                 uploaded, port, key,
                 event=0, ip_address=0, num_want=-1):
@@ -42,26 +44,32 @@ class UDPRequest:
         #TODO: take care of return value
         self.make_request(announce_req_packet)
         #TODO: check action number
-        announce_res_packet = self.get_response()
+        #TODO: check weather the packet is at least 20 bytes
+        announce_res_packet, address = self.get_response()
         announce_res = unpaketize_response(announce_res_packet)
-        return announce_res
+        return announce_res, address
 
     def scrape(self, connection_id, transaction_id, info_hash):
+        #TODO write scrape for multiple info_hash, possibly change
+        #       pktformatting
 
         scrape_req_packet = packetize_scrap_req(connection_id, 
-                                            transaction_id,
-                                            info_hash)
+                                                action,
+                                                transaction_id,
+                                                info_hash)
 
         #TODO: take care of return value
         self.make_request(scrape_req_packet)
 
-        scrape_res_packet = self.get_response()
+        #TODO: check weather the packet is at least 8 byte
+        scrape_res_packet, address = self.get_response()
         #TODO: check action number
         scrape_res = unpaketize_response(scrape_req_packet)
         return scrape_res
 
     def make_request(self, req_packet):
         return self.torrent_client_socket.sendto(req_packet,
+                                                self.tracker_address)
     
     def get_response(self):
 
@@ -73,12 +81,14 @@ class UDPRequest:
             self.torrent_client_socket.settimeout(timeout)
             try:
                 print("waiting for server to respond...")
-                res_packet, address = (self.torrent_client_socket.recvfrom(1024))
+                #FIXME 2048 might restrict the peer list so we have to recv
+                #       full msg(find a good hack)
+                res_packet, address = self.torrent_client_socket.recvfrom(2048)
             except socket.timeout:
                 timeout *= 2
                 count += 1
                 continue
             break
 
-        return  res_packet, address
+        return res_packet, address
 

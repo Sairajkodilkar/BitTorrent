@@ -32,7 +32,7 @@ def make_pkt(packet_structure):
     #TODO: change key, value names to the sensible names
     for key, value in packet_structure:
         if(value not in PacketFormat()):
-            raise PacketStructureError("Invalid format specifier")
+            raise PacketStructureError(f" Invalid format specifier")
 
         elif(isinstance(value, PacketFormat.BYTES_SIZE_TYPE)):
             if(not isinstance(key, bytes)):
@@ -41,7 +41,7 @@ def make_pkt(packet_structure):
 
         else:
             if(not isinstance(key, int)):
-                raise PacketStructureError("Invalid value type")
+                raise PacketStructureError(f"{key}:{value}, Invalid value type")
             packet += struct.pack("!" + value, key)
 
     return packet
@@ -70,27 +70,30 @@ def decode_pkt(packet, packet_format):
                 offset += value
 
         elif(value == PacketFormat.SHORT):
-            decoded_value = int.from_bytes(packet[
+            decoded_value = struct.unpack("!" + value, 
+                                        packet[
                                             offset : 
                                             offset + PacketFormat.SHORT_SIZE
-                                            ], NETWORK_ENDIANESS)
-            packet_values.append(decoded_value)
+                                            ])
+            packet_values.append(*decoded_value)
             offset += PacketFormat.SHORT_SIZE
 
         elif(value == PacketFormat.INTEGER):
-            decoded_value = int.from_bytes(packet[
+            decoded_value = struct.unpack("!" + value, 
+                                        packet[
                                             offset : 
                                             offset + PacketFormat.INTEGER_SIZE
-                                            ], NETWORK_ENDIANESS)
-            packet_values.append(decoded_value)
+                                            ])
+            packet_values.append(*decoded_value)
             offset += PacketFormat.INTEGER_SIZE
 
         elif(value == PacketFormat.LONG_LONG):
-            decoded_value = int.from_bytes(packet[
+            decoded_value = struct.unpack("!" + value, 
+                                        packet[
                                             offset : 
                                             offset + PacketFormat.LONG_LONG_SIZE
-                                            ], NETWORK_ENDIANESS)
-            packet_values.append(decoded_value)
+                                            ])
+            packet_values.append(*decoded_value)
             offset += PacketFormat.LONG_LONG_SIZE
 
     return tuple(packet_values)

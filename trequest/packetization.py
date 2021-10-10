@@ -7,18 +7,6 @@ import sys
 #magic constant
 CONNECTION_PROTOCOL_ID = 0x41727101980
 
-class Action:
-    CONNECT = 0
-    ANNOUNCE = 1
-    SCRAPE = 2
-    ERROR = 3
-
-class Events:
-    NONE = 0
-    COMPLETE = 1
-    STARTED = 2
-    STOPPED = 3
-    
 class UnpacketizationError(Exception):
 
     def __init__(self, *args, **kwargs):
@@ -50,7 +38,7 @@ def packetize_announce_req(connection_id, transaction_id, info_hash,
                 ]
     packet_structure = tuple(zip(pkt_content, ANNOUNCE_REQUEST_FORMAT))
 
-    return tuple(make_pkt(packet_structure))
+    return make_pkt(packet_structure)
 
 def packetize_scrap_req(connection_id, transaction_id, info_hash):
 

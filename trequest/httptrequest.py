@@ -38,9 +38,9 @@ class THttp:
         params['uploaded'] = uploaded
         params['downloaded'] = downloaded
         params['left'] = left
-        params['compact'] = compact
-        params['event'] = event
-        params.update(kwargs)
+        #params['compact'] = compact
+        #params['event'] = event
+        #params.update(kwargs)
 
         http_response = requests.get(self.announce_url, params=params)
         if(http_response.status_code != requests.codes.ok):
@@ -58,6 +58,7 @@ class THttp:
         params['info_hash'] = info_hash
 
         print("sending http request")
+        #TODO:change request.get and write your own 
         http_response = requests.get(scrape_url, params=params)
         if(http_response.status_code != requests.codes.ok):
             raise THttpGetError("Torrent Tracker says: {}"

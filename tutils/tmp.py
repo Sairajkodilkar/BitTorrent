@@ -60,12 +60,12 @@ headers= {
 
 scraper = "https://torrent.ubuntu.com/scraper"
 
-GET_REQUEST = ( "GET /announce?info_hash={}&peer_id=2345678911234567890&port=8080&uploaded=0&downloaded=0&left=2820000000&event=started HTTP/1.1\r\n".format(encoded) +\
+GET_REQUEST = ( "GET /announce?info_hash={}&peer_id=12345678901234567890&port=8080&uploaded=0&downloaded=0&left=2820000000&event=started HTTP/1.1\r\n".format(encoded) +\
                 "Host: torrent.ubuntu.com\r\n\r\n").encode()
-#client("torrent.ubuntu.com", 443, GET_REQUEST)
+client("torrent.ubuntu.com", 443, GET_REQUEST)
 url = "https://torrent.ubuntu.com/announce"
-r = requests.get(url, params=headers)
-print(r.content)
+#r = requests.get(url, params=headers)
+#print(r.content)
 '''
 print(r.headers)
 print(r.url)

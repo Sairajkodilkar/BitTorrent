@@ -12,11 +12,12 @@ Problems:
                 invoke the peer functions on it
 
         On termination of peer connection the thread must also be closed
-        How to determine if the connections is closed by peer
+        -How to determine if the connections is closed by peer
+        -Need to check the socket state every time.
 
         I should also maintain the states for all the peers:
             Is he chocking/unchocking me
-            Is interested/not interested in me
+            Is he interested/not interested in me
             Am I chocking/unchocking him
             Am I interested/not interested in him
 
@@ -36,7 +37,10 @@ Problems:
 class Peer:
 
     def __init__(self, address):
-        #create socket with peer
+        self._peer_is_chock = 
+        self._peer_is_interested = 
+        self._chock =
+        self._interested = 
         self.address = address
         pass
 

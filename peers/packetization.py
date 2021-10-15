@@ -32,9 +32,7 @@ class ID:
 def packetize_handshake(pstrlen, pstr, reserved, info_hash, peer_id):
 
     packet_content = [pstrlen, pstr, reserved, info_hash, peer_id]
-    handshake_format = HANDSHAKE_FORMAT
-    handshake_format[1] = pstrlen
-    packet_structure  = tuple(zip(packet_content, handshake_format))
+    packet_structure  = tuple(zip(packet_content, HANDSHAKE_FORMAT))
 
     return make_pkt(packet_structure)
 
@@ -112,4 +110,50 @@ def packetize_port(listen_port:int):
     packet_structure = tuple(zip(packet_content,  PORT_FORMAT))
 
     return header + make_pkt(packet_structure)
+
+def unpacketize_handshake(packet):
+
+    handshake = decode_pkt(packet, HANDSHAKE_FORMAT)
+
+    return handshake
+
+def unpacketize_response(packet):
+
+    if(len(packet) == PacketFormat.INTEGER_SIZE):
+        return (0,)
+    
+    unpacktized = decode_pkt(packet, HEADER_FORMAT)
+
+    length = unpacktized[0]
+    identity =  unpacktized[1]
+
+    response = None
+    if(identity == ID.CHOCK or identity == ID.UNCHOCK 
+            or identity == ID.INTERESTED or identity == ID.NOT_INTERESTED):
+        return (identity,)
+
+    if(len(unpacktized) != 3):
+        return -1
+
+    payload = unpacktized[2]
+
+    if(identity == ID.HAVE):
+        response = decode_pkt(payload, HAVE_FORMAT)
+
+    elif(identity == ID.BIT_FIELD):
+        response  = decode_pkt(payload, BITFIELD_FORMAT)
+
+    elif(identity == ID.REQUEST):
+        response = decode_pkt(payload, REQUEST_FORMAT)
+
+    elif(identity == ID.PIECE):
+        response = decode_pkt(payload, PIECE_FORMAT)
+
+    elif(identity == ID.CANCEL):
+        response = decode_pkt(payload, CANCEL_FORMAT)
+
+    elif(identity == ID.PORT):
+        response = decode_pkt(payload, PORT_FORMAT)
+
+    return identity, *response
 

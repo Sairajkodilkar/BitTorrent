@@ -8,6 +8,7 @@ class PacketFormat:
     SHORT           = 'h'
     INTEGER         = 'i'
     LONG_LONG       = 'q'
+    STRING          = 's'
     TILL_END        = -1
     BYTES_SIZE_TYPE = int
 
@@ -18,7 +19,7 @@ class PacketFormat:
 
     def __contains__(self, format_specifier):
         return (format_specifier in (self.SHORT, self.INTEGER, self.LONG_LONG,
-            self.BYTE, self.TILL_END) 
+            self.BYTE, self.TILL_END, self.STRING) 
                 or isinstance(format_specifier, int))
 
 
@@ -37,9 +38,11 @@ def make_pkt(packet_structure):
     #TODO: change key, value names to the sensible names
     for key, value in packet_structure:
         if(value not in PacketFormat()):
-            raise PacketStructureError(f" Invalid format specifier")
+            raise PacketStructureError(f"Invalid format specifier {value}")
 
-        elif(isinstance(value, PacketFormat.BYTES_SIZE_TYPE)):
+        elif(isinstance(value, PacketFormat.BYTES_SIZE_TYPE) 
+                or value == PacketFormat.STRING):
+
             if(not isinstance(key, bytes)):
                 raise PacketStructureError("Invalid key type, expected bytes object")
             packet += key
@@ -61,18 +64,23 @@ def decode_pkt(packet, packet_format):
     #TODO: change key, value names to the sensible names
     for value in packet_format:
         if(offset >= len(packet)):
-            raise PacketStructureError("Too many field in packet format")
+            break
 
         elif(value not in PacketFormat()):
             raise PacketStructureError("Invalid format specifier")
 
         elif(isinstance(value, PacketFormat.BYTES_SIZE_TYPE)):
-            if(value == TILL_END):
+            if(value == PacketFormat.TILL_END):
                 packet_values.append(packet[offset : ])
                 offset = len(packet)
             else:
                 packet_values.append(packet[offset : offset + value])
                 offset += value
+
+        elif(value == PacketFormat.STRING):
+            string_len = packet_values[-1]
+            packet_values.append(packet[offset : offset + string_len])
+            offset += string_len
 
         elif(value == PacketFormat.BYTE):
             decode_value = struct.unpack("!" + value, 
@@ -109,6 +117,8 @@ def decode_pkt(packet, packet_format):
                                             ])
             packet_values.append(*decoded_value)
             offset += PacketFormat.LONG_LONG_SIZE
+        else:
+            PacketStructureError("Invalid packet error")
 
     return tuple(packet_values)
 

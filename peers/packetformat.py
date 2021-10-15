@@ -2,7 +2,7 @@ from bittorrent.packet.packet import PacketFormat
 
 HANDSHAKE_FORMAT = [
         PacketFormat.BYTE,          #protocol string length //"BitTorrent protocol"
-        19,                         #protocol string 
+        PacketFormat.STRING,                         #protocol string 
                                     #   Note:   Protocol string can be changed
                                     #           by the user hence the protocol
                                     #           length must also be changed
@@ -17,7 +17,8 @@ KEEP_ALIVE_FORMAT = [
 
 HEADER_FORMAT = [
         PacketFormat.INTEGER,       #length 
-        PacketFormat.BYTE           #id     
+        PacketFormat.BYTE,          #id     
+        PacketFormat.TILL_END
     ]
 
 HAVE_FORMAT =  [
@@ -25,7 +26,7 @@ HAVE_FORMAT =  [
     ]
 
 BITFIELD_FORMAT = [
-        -1                          #bit field
+        PacketFormat.TILL_END                          #bit field
     ]
 
 REQUEST_FORMAT = [
@@ -37,7 +38,7 @@ REQUEST_FORMAT = [
 PIECE_FORMAT = [
         PacketFormat.INTEGER,       #index
         PacketFormat.INTEGER,       #begin
-        -1                          #block
+        PacketFormat.TILL_END                          #block
     ]
 
 CANCEL_FORMAT = [

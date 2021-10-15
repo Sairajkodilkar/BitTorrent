@@ -52,10 +52,8 @@ def packetize_scrap_req(connection_id, transaction_id, info_hash):
 
 def unpaketize_response(packet):
     
-    print(packet)
     action, transaction_id, payload = decode_pkt(packet, 
                                                 RESPONSE_HEADER_FORMAT)
-    print(action, transaction_id)
     response = None
     if(action == Action.CONNECT):
         response = decode_pkt(payload, CONNECTION_RESPONSE_FORMAT)

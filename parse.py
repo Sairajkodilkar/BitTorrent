@@ -22,6 +22,7 @@ def parse_peers(peers, compact):
         bencoder = bdencoder.Bdecoder(peers, "b")
         peers_list = bencoder.decode()[0]
     return peers_list
+
 def parse_scrape_res(scrape_res):
 
     i = 0

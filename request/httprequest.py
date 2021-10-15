@@ -38,9 +38,9 @@ class THttp:
         params['uploaded'] = uploaded
         params['downloaded'] = downloaded
         params['left'] = left
-        #params['compact'] = compact
-        #params['event'] = event
-        #params.update(kwargs)
+        params['compact'] = compact
+        params['event'] = event
+        params.update(kwargs)
 
         http_response = requests.get(self.announce_url, params=params)
         if(http_response.status_code != requests.codes.ok):

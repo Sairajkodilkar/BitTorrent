@@ -3,17 +3,22 @@ import struct
 NETWORK_ENDIANESS = "big"
 
 class PacketFormat:
-    SHORT = 'h'
-    INTEGER = 'i'
-    LONG_LONG = 'q'
+
+    BYTE            = 'b'
+    SHORT           = 'h'
+    INTEGER         = 'i'
+    LONG_LONG       = 'q'
+    TILL_END        = -1
     BYTES_SIZE_TYPE = int
 
-    SHORT_SIZE = 2
-    INTEGER_SIZE = 4
-    LONG_LONG_SIZE = 8
+    BYTE_SIZE       = 1
+    SHORT_SIZE      = 2
+    INTEGER_SIZE    = 4
+    LONG_LONG_SIZE  = 8
 
     def __contains__(self, format_specifier):
-        return (format_specifier in (self.SHORT, self.INTEGER, self.LONG_LONG) 
+        return (format_specifier in (self.SHORT, self.INTEGER, self.LONG_LONG,
+            self.BYTE, self.TILL_END) 
                 or isinstance(format_specifier, int))
 
 
@@ -62,12 +67,21 @@ def decode_pkt(packet, packet_format):
             raise PacketStructureError("Invalid format specifier")
 
         elif(isinstance(value, PacketFormat.BYTES_SIZE_TYPE)):
-            if(value == -1):
+            if(value == TILL_END):
                 packet_values.append(packet[offset : ])
-                offset += value
+                offset = len(packet)
             else:
                 packet_values.append(packet[offset : offset + value])
                 offset += value
+
+        elif(value == PacketFormat.BYTE):
+            decode_value = struct.unpack("!" + value, 
+                                        packet[
+                                            offset :
+                                            offset + PacketFormat.BYTE_SIZE
+                                            ])
+            packet_values.append(*decode_value)
+            offset += PacketFormat.BYTE_SIZE
 
         elif(value == PacketFormat.SHORT):
             decoded_value = struct.unpack("!" + value, 

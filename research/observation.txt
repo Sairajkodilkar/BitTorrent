@@ -81,3 +81,6 @@ Server can give different tracker list each time
 The same peer can send and recv using tcp as well as udp 
 
 The bittorrent dump for the transmission is weird
+
+Close connection when torrent does not respond at the start of the
+transmission.

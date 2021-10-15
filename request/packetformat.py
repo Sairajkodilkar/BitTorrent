@@ -1,9 +1,9 @@
-from packet import PacketFormat 
+from bittorrent.packet.packet import PacketFormat 
 
 RESPONSE_HEADER_FORMAT = [
         PacketFormat.INTEGER,       #action         
         PacketFormat.INTEGER,       #transaction_id
-        -1
+        PacketFormat.TILL_END
     ]
 
 CONNECTION_REQUEST_FORMAT = [
@@ -28,7 +28,7 @@ ANNOUNCE_REQUEST_FORMAT = [
         PacketFormat.INTEGER,       #event          0
         PacketFormat.INTEGER,       #IP address     0 default/IPv6
         PacketFormat.INTEGER,       #key            
-        PacketFormat.INTEGER,       #num_want       -1 
+        PacketFormat.INTEGER,       #num_want       PacketFormat.TILL_END 
         PacketFormat.SHORT          #port           //What is use ofthis?typically 6881-6889 
     ]
 
@@ -36,7 +36,7 @@ ANNOUNCE_RESPONSE_FORMAT = [
         PacketFormat.INTEGER,       #interval
         PacketFormat.INTEGER,       #leechers
         PacketFormat.INTEGER,       #seeders
-        -1                          #peer_list
+        PacketFormat.TILL_END                          #peer_list
     ]
 
 
@@ -54,6 +54,6 @@ SCRAPE_RESPONSE_FORMAT = [
     ]
 
 ERROR_RESPONSE_FORMAT = [
-        -1
+        PacketFormat.TILL_END
     ]
 

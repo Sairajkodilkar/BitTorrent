@@ -1,4 +1,4 @@
-from packet import make_pkt, decode_pkt
+from bittorrent.packet import make_pkt, decode_pkt
 from pkt_format import *
 import sys
 

@@ -1,8 +1,20 @@
 from packetization import *
-from pkt_format import Action, Event
 import socket
 
 import struct
+
+class Action:
+    CONNECT = 0
+    ANNOUNCE = 1
+    SCRAPE = 2
+    ERROR = 3
+
+class Event:
+    NONE = 0
+    COMPLETE = 1
+    STARTED = 2
+    STOPPED = 3
+    
 
 class TrackerTimeoutError(Exception):
     

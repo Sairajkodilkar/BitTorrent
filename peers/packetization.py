@@ -6,6 +6,7 @@ from bittorrent.packet.packet import (
 
 from packetformat import *
 
+LENGHT_LEN        = PacketFormat.INTEGER_SIZE
 HEADER_LEN        = PacketFormat.BYTE_SIZE
 CHOCK_LEN         = HEADER_LEN
 UNCHOCK_LEN       = HEADER_LEN
@@ -29,6 +30,11 @@ class ID:
     CANCEL          = 8
     PORT            = 9
 
+class IndentityError(Exception):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+
 def packetize_handshake(pstrlen, pstr, reserved, info_hash, peer_id):
 
     packet_content = [pstrlen, pstr, reserved, info_hash, peer_id]
@@ -44,10 +50,15 @@ def packetize_keepalive():
     return make_pkt(packet_structure)
 
 def packetize_header(message_len, message_id):
-    packet_content = [message_len, message_id]
-    packet_structure = tuple(zip(packet_content, HEADER_FORMAT))
+    packet_lenght = [message_len]
+    packet_structure = tuple(zip(packet_lenght, LENGTH_FORMAT))
+    packet = make_pkt(packet_structure)
 
-    return make_pkt(packet_structure)
+    packet_id = [message_id]
+    packet_structure = tuple(zip(packet_id, HEADER_FORMAT))
+    packet += make_pkt(packet_structure)
+
+    return packet
 
 def packetize_chock():
 
@@ -117,25 +128,33 @@ def unpacketize_handshake(packet):
 
     return handshake
 
+def unpacketize_length(packet):
+
+    response = decode_pkt(packet, LENGTH_FORMAT)
+
+    return response
+
 def unpacketize_response(packet):
 
-    if(len(packet) == PacketFormat.INTEGER_SIZE):
-        return (0,)
+    #user should always call unpacketize lenght to ensure that the packet is
+    #recv completely before unpacking it
+    #remove it from here and give it to control to user
+    if(len(packet) == 0):
+        return
     
     unpacktized = decode_pkt(packet, HEADER_FORMAT)
 
-    length = unpacktized[0]
-    identity =  unpacktized[1]
+    identity =  unpacktized[0]
 
     response = None
     if(identity == ID.CHOCK or identity == ID.UNCHOCK 
             or identity == ID.INTERESTED or identity == ID.NOT_INTERESTED):
         return (identity,)
 
-    if(len(unpacktized) != 3):
+    if(len(unpacktized) != len(HEADER_FORMAT)):
         return -1
 
-    payload = unpacktized[2]
+    payload = unpacktized[1]
 
     if(identity == ID.HAVE):
         response = decode_pkt(payload, HAVE_FORMAT)
@@ -154,6 +173,9 @@ def unpacketize_response(packet):
 
     elif(identity == ID.PORT):
         response = decode_pkt(payload, PORT_FORMAT)
+    
+    else:
+        IndentityError("Wrong ID field in response")
 
     return identity, *response
 

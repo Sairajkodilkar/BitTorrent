@@ -1,4 +1,4 @@
-from bdencoder import bdencoder
+from bittorrent.bdencoder import bdencoder
 import socket
 
 IP_ADDR_SIZE = 4

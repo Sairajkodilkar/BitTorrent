@@ -3,6 +3,7 @@ from bittorrent.packet.packet import PacketFormat
 HANDSHAKE_FORMAT = [
         PacketFormat.BYTE,          #protocol string length //"BitTorrent protocol"
         PacketFormat.STRING,        #protocol string 
+        PacketFormat.LONG_LONG,     #reserved
         20,                         #Info Hash
         20                          #peer ID
     ]
@@ -11,8 +12,12 @@ KEEP_ALIVE_FORMAT = [
         PacketFormat.INTEGER        #length //0
     ]
 
-HEADER_FORMAT = [
+LENGTH_FORMAT = [
         PacketFormat.INTEGER,       #length 
+        PacketFormat.TILL_END
+    ]
+
+HEADER_FORMAT = [
         PacketFormat.BYTE,          #id     
         PacketFormat.TILL_END
     ]

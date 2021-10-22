@@ -18,45 +18,59 @@
 #peer_list[peer].he intertest and I unchocked him then simply serve the request
 #                   else ignore the request
 #each peer handler will have the sender and recvr thread where he will use FSM
+from piece import Status, Piece
+
 class TorrentStatus:
     LEECHER = 1
     SEEDER = 2
 
 class Torrent:
 
-    def __init__(self, peer_id, peers_list, info_hash,
-                no_of_pieces, torrent_status=TorrentStatus.LEECHER):
+    def __init__(self, data_file:File, peer_id, peers_set, info_hash,
+                pieces_list, torrent_status=TorrentStatus.LEECHER):
 
-        self.peer_list      = peer_list
+        self.data_file      = data_file 
+        self.peer_set       = peer_set
         self.peer_id        = peer_id
         self.info_hash      = info_hash
         self.torrent_status = torrent_status
-        self.pieces_info    = pieces_info
+        self.pieces_list    = pieces_list
 
     def get_completed_pieces(self):
+        bitfield = 0
+        currentbit = 1
+        for piece in self.pieces_list:
+            if piece.status = Status.COMPLETED:
+                bitfield = bitfield | currentbit 
+            currentbit = currentbit << 1
+        total_pieces = len(self.pieces_list)
+        total_bytes = total_pieces / 8 + total_pieces % 8
+        bitfield_bytes = bitfield.to_bytes(total_bytes, "big")
         return bitfield
 
-    def sort_peer_list(self):
-        #the return list would be useful for rareest first
-        pass
-not 
     def update_torrent_bitfield(self, bitfield):
-        pass
+        bitfield_int = int.from_bytes(bitfield, "big")
+        for piece in self.pieces_list:
+            bit = bitfield_int & 1
+            bitfield_int = bitfield_int >> 1
+            if(bit):
+                piece.piece_count += 1
 
-    def add_peers(self, peer_list):
-        self.peer_list.append(peer_list)
+    def add_peers(self, peer_set):
+        self.peer_set.update(peer_set)
 
-    def update_piece_status(self, piece_index, status_id, status):
-        pass
-
-    def update_peer_status(self, peer_address, status_id, status):
-        pass
+    def update_piece_status(self, piece_index, status):
+        if(status == Status.COMPLETED):
+            self.total_completed += 1
+        self.pieces_list[piece_index].status = status
 
     def get_piece_status(self, piece_index):
-        pass
-
-    def get_top_four(self):
-        pass
+        return self.pieces_list[piece_index].status
 
     def is_torrent_completed(self):
-        pass
+        return self.total_completed == len(self.pieces_list)
+
+
+
+
+

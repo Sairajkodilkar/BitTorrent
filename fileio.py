@@ -1,4 +1,4 @@
-class Files:
+class File:
 
     def __init__(self, directory:bool, name:str, files=None, basedir=None):
         #files only in case if it is directory
@@ -12,14 +12,14 @@ class Files:
         '''
         pass
 
-    def write_piece(self, piece, index, begin, length):
+    def write_piece(self, index, begin, length):
         '''
         Write the piece to the file
         while writing the piece take care of the boundaries
         '''
         pass
 
-    def read_piece(self, index, begin, length):
+    def read_piece(self, index, begin, length)->Piece:
         '''
         read the piece from the file/s
         determine the piece boundries

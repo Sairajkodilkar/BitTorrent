@@ -24,23 +24,50 @@ class TorrentStatus:
     LEECHER = 1
     SEEDER = 2
 
+#TODO: create pieces class by inheriting the list class
+#   Interface:
+#       1) get_completed_pieces 
+#       2) add_torrent_bitfield
+#       3) add piece
 class Torrent:
 
-    def __init__(self, data_file:File, peer_id, peers_set, info_hash,
-                pieces_list, torrent_status=TorrentStatus.LEECHER):
+    def __init__(self, data_file:File, peer_id, peers, info_hash,
+                pieces, torrent_status=TorrentStatus.LEECHER):
 
         self.data_file      = data_file 
-        self.peer_set       = peer_set
+        self.peers          = peers
         self.peer_id        = peer_id
         self.info_hash      = info_hash
         self.torrent_status = torrent_status
-        self.pieces_list    = pieces_list
+        self.pieces         = pieces
+        #schedule sorting after every 1 min
+
+    def _sort_peers(self):
+        if(selt.torrent_status ==  TorrentStatus.LEECHER):
+            self.peers.sort(key=Peers.get_download_speed, reverse=True)
+        else:
+            self.peers.sort(key=Peers.get_upload_speed, reverse=True)
+
+    def get_rarest_piece(self):
+        for piece in self.pieces:
+            if(piece.piece_count and piece.status == None):
+                return piece
+        return 
+
+    def add_peers(self, peers):
+        self.peers.append(peers)
+
+    def is_torrent_completed(self):
+        for piece in self.pieces:
+            if(piece.status != Status.COMPLETED):
+                return False
+        return True
 
     def get_completed_pieces(self):
         bitfield = 0
         currentbit = 1
-        for piece in self.pieces_list:
-            if piece.status = Status.COMPLETED:
+        for piece in self.pieces:
+            if piece.status == Status.COMPLETED:
                 bitfield = bitfield | currentbit 
             currentbit = currentbit << 1
         total_pieces = len(self.pieces_list)
@@ -48,27 +75,6 @@ class Torrent:
         bitfield_bytes = bitfield.to_bytes(total_bytes, "big")
         return bitfield
 
-    def update_torrent_bitfield(self, bitfield):
-        bitfield_int = int.from_bytes(bitfield, "big")
-        for piece in self.pieces_list:
-            bit = bitfield_int & 1
-            bitfield_int = bitfield_int >> 1
-            if(bit):
-                piece.piece_count += 1
-
-    def add_peers(self, peer_set):
-        self.peer_set.update(peer_set)
-
-    def update_piece_status(self, piece_index, status):
-        if(status == Status.COMPLETED):
-            self.total_completed += 1
-        self.pieces_list[piece_index].status = status
-
-    def get_piece_status(self, piece_index):
-        return self.pieces_list[piece_index].status
-
-    def is_torrent_completed(self):
-        return self.total_completed == len(self.pieces_list)
 
 
 

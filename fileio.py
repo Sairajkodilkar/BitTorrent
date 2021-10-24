@@ -12,7 +12,7 @@ class File:
         '''
         pass
 
-    def write_piece(self, index, begin, length):
+    def write_piece(self, piece):
         '''
         Write the piece to the file
         while writing the piece take care of the boundaries

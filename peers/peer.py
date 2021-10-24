@@ -2,9 +2,7 @@
 Keepalives are generally sent once every two minutes, but note that timeouts can be done much more quickly when data is expected.
 Should I include timeout inside or outside
 Problems:
-    !!!!!The handshake for the peer is sending some reserved byte!!!!!
-    How to manage all the peers?
-        there must be one listening thread
+    !!!!!The handshake for the peer is sending some reserved byte!!!!!  How to manage all the peers?  there must be one listening thread
         Each peer must have its own thread?
             -But main thread must be able to manage all the thread
             -Main thread should be able to determine download rate and
@@ -68,6 +66,8 @@ class Peer:
         self.total_data_recvd = 0
         self.total_data_sent = 0
 
+        self.pieces_list = Pieces()
+
     @property
     def chocked(self):
         return self.peer_state.choke
@@ -127,14 +127,17 @@ class Peer:
             self.peer_state.interested = True
         elif(response[0] == ID.NOT_INTERESTED):
             self.peer_state.interested = False
+        elif(response[0] == ID.HAVE):
+            self._add_piece(response[1])
+        elif(response[0] == ID.BIT_FIELD):
+            self.pieces_list.add_bitfield(response[1])
 
         return response
 
-    def send_packet(pkt_content):
+    def send_packet(self, pkt_content):
         self.peer_sock.sendall(pkt_content)
         self.last_send_time = time.time()
         self.total_data_sent += len(pkt_content)
-
 
     def handshake(self, info_hash, peer_id, pstr=b"BitTorrent protocol"):
         pkt_content = packetize_handshake(len(pstr), pstr, 0, info_hash,
@@ -192,4 +195,14 @@ class Peer:
         self.peer_sock.close()
         self.my_state.connected = False
         self.peer_sock.connected = False
-        
+
+    def get_download_speed(self):
+        time_interval = self.last_recv_time - time.time()
+        download_speed = self.total_data_recvd / time_interval
+        return download_speed
+
+    def get_upload_speed(self):
+        time_interval = self.last_recv_time - time.time()
+        upload_speed = self.total_data_sent / time_interval
+        return upload_speed
+

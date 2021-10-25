@@ -18,7 +18,8 @@
 #peer_list[peer].he intertest and I unchocked him then simply serve the request
 #                   else ignore the request
 #each peer handler will have the sender and recvr thread where he will use FSM
-from piece import Status, Piece
+from piece import Status, Piece, Pieces
+from bittorrent.fileio import File
 
 class TorrentStatus:
     LEECHER = 1
@@ -31,8 +32,9 @@ class TorrentStatus:
 #       3) add piece
 class Torrent:
 
-    def __init__(self, data_file:File, peer_id, peers, info_hash,
-                pieces, torrent_status=TorrentStatus.LEECHER):
+    def __init__(self, data_file:File, peer_id:bytes, peers:list,
+            info_hash:bytes,
+            pieces:Pieces, torrent_status=TorrentStatus.LEECHER):
 
         self.data_file      = data_file 
         self.peers          = peers
@@ -48,6 +50,9 @@ class Torrent:
         else:
             self.peers.sort(key=Peers.get_upload_speed, reverse=True)
 
+    def _sort_piece(self):
+        self.pieces.sort()
+
     def get_rarest_piece(self):
         for piece in self.pieces:
             if(piece.piece_count and piece.status == None):
@@ -62,21 +67,3 @@ class Torrent:
             if(piece.status != Status.COMPLETED):
                 return False
         return True
-
-    def get_completed_pieces(self):
-        bitfield = 0
-        currentbit = 1
-        for piece in self.pieces:
-            if piece.status == Status.COMPLETED:
-                bitfield = bitfield | currentbit 
-            currentbit = currentbit << 1
-        total_pieces = len(self.pieces_list)
-        total_bytes = total_pieces / 8 + total_pieces % 8
-        bitfield_bytes = bitfield.to_bytes(total_bytes, "big")
-        return bitfield
-
-
-
-
-
-

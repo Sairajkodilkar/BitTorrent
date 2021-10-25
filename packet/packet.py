@@ -9,6 +9,11 @@ class PacketFormat:
     INTEGER         = 'i'
     LONG_LONG       = 'q'
     STRING          = 's'
+    UBYTE           = 'B'
+    USHORT          = 'H'
+    UINTEGER        = 'I'
+    ULONG_LONG      = 'Q'
+    USTRING         = 'S'
     TILL_END        = -1
     BYTES_SIZE_TYPE = int
 
@@ -19,7 +24,8 @@ class PacketFormat:
 
     def __contains__(self, format_specifier):
         return (format_specifier in (self.SHORT, self.INTEGER, self.LONG_LONG,
-            self.BYTE, self.TILL_END, self.STRING) 
+            self.BYTE, self.TILL_END, self.STRING, self.USHORT, self.UINTEGER,
+            self.ULONG_LONG, self.UBYTE, self.USTRING) 
                 or isinstance(format_specifier, int))
 
 
@@ -91,7 +97,7 @@ def decode_pkt(packet, packet_format):
             packet_values.append(*decode_value)
             offset += PacketFormat.BYTE_SIZE
 
-        elif(value == PacketFormat.SHORT):
+        elif(value == PacketFormat.SHORT or value == PacketFormat.USHORT):
             decoded_value = struct.unpack("!" + value, 
                                         packet[
                                             offset : 
@@ -100,7 +106,7 @@ def decode_pkt(packet, packet_format):
             packet_values.append(*decoded_value)
             offset += PacketFormat.SHORT_SIZE
 
-        elif(value == PacketFormat.INTEGER):
+        elif(value == PacketFormat.INTEGER or value == PacketFormat.UINTEGER):
             decoded_value = struct.unpack("!" + value, 
                                         packet[
                                             offset : 
@@ -109,7 +115,8 @@ def decode_pkt(packet, packet_format):
             packet_values.append(*decoded_value)
             offset += PacketFormat.INTEGER_SIZE
 
-        elif(value == PacketFormat.LONG_LONG):
+        elif(value == PacketFormat.LONG_LONG 
+            or value == PacketFormat.ULONG_LONG):
             decoded_value = struct.unpack("!" + value, 
                                         packet[
                                             offset : 

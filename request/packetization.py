@@ -1,6 +1,5 @@
 from bittorrent.packet.packet import make_pkt, decode_pkt
 from packetformat import *
-import sys
 
 #TODO: Check the given argument is of expected bits
 

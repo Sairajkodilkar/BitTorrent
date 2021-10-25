@@ -5,7 +5,6 @@ d3:cowi3ee
 '''
 
 import struct
-import sys
 
 class BencodingError(Exception):
     

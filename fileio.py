@@ -1,3 +1,4 @@
+from bittorrent.piece import *
 class File:
 
     def __init__(self, directory:bool, name:str, files=None, basedir=None):

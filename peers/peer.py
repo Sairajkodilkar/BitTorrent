@@ -38,7 +38,8 @@ Problems:
 
 '''
 
-from packetization import *
+from bittorrent.peers.packetization import *
+from bittorrent.piece import *
 import time
 
 MAX_HANDSHAKE_LEN = 304
@@ -46,7 +47,7 @@ HANDSHAKE_BUFFER_LEN = 1<<9 #its greater than the max size to have some buffer
 
 class PeerState:
 
-    def __init__(chock=False, interested=False, connected=True):
+    def __init__(self, chock=False, interested=False, connected=True):
         self.chock      = chock
         self.interested = interested
         self.connected  = connected #specify if peer close the connection
@@ -54,19 +55,19 @@ class PeerState:
 
 class Peer:
 
-    def __init__(self, socket):
+    def __init__(self, socket, pieces):
         self.peer_sock = socket
 
         self.peer_state = PeerState()
         self.my_state = PeerState()
 
-        self.timer = time.time()
+        self.start_time = time.time()
         self.last_send_time = time.time()
         self.last_recv_time = time.time()
         self.total_data_recvd = 0
         self.total_data_sent = 0
 
-        self.pieces_list = Pieces()
+        self.pieces_list = Pieces(pieces)
 
     @property
     def chocked(self):
@@ -97,20 +98,17 @@ class Peer:
     def recv_all(self):
         #recv first 4 bytes to determine the length
         #The user should use try to see if pipe is broken or not
-        packet = self.peer_sock.recv(LENGHT_LEN)
+        packet = self.peer_sock.recv(PacketFormat.INTEGER_SIZE)
         self.last_recv_time = time.time()
 
         if(not packet):
             return (-1,)
 
-        length_payload = unpacketize_length(packet)
-        if(length_payload[0] == 0):
-            return 0
-        data = length_payload[1]
-        while(len(data) < length_payload[0]):
-            remaining = length_payload - len(data)
-            self.peer_sock.recv(remaining)
-            data += length_payload[1]
+        length = unpacketize_length(packet)[0]
+
+        data = self.peer_sock.recv(length)
+        while(len(data) < length):
+            data += self.peer_sock.recv(length - len(data))
 
         self.last_recv_time = time.time()
         self.total_data_recvd += len(data)
@@ -120,16 +118,22 @@ class Peer:
     def decode_data(self, data):
         response = unpacketize_response(data)
         if(response[0] == ID.CHOCK):
+            print("Peer has chocked me")
             self.my_state.chock = True
         elif(response[0] == ID.UNCHOCK):
+            print("Peer has unchocked me")
             self.my_state.chock = False
         elif(response[0] == ID.INTERESTED):
+            print("peer is interested")
             self.peer_state.interested = True
         elif(response[0] == ID.NOT_INTERESTED):
+            print("peer is not interested")
             self.peer_state.interested = False
         elif(response[0] == ID.HAVE):
+            print("peer has piece")
             self._add_piece(response[1])
         elif(response[0] == ID.BIT_FIELD):
+            print("peer sent the bitfield")
             self.pieces_list.add_bitfield(response[1])
 
         return response
@@ -143,7 +147,18 @@ class Peer:
         pkt_content = packetize_handshake(len(pstr), pstr, 0, info_hash,
                                         peer_id)
         self.send_packet(pkt_content)
-        handshake_response_packet = self.peer_sock.recv(HANDSHAKE_BUFFER_LEN)
+
+        handshake_str_len_packet = self.peer_sock.recv(PacketFormat.BYTE_SIZE)
+        print("hanshake str len:", handshake_str_len_packet)
+        handshake_str_len = unpacketize_handshake_length(handshake_str_len_packet)[0]
+        handshake_str_packet = self.peer_sock.recv(handshake_str_len)
+        print("hanshake str :", handshake_str_packet)
+        handshake_remaining = self.peer_sock.recv(48)
+        print("remaining", handshake_remaining)
+
+        handshake_response_packet = (handshake_str_len_packet +
+                                    handshake_str_packet + handshake_remaining)
+
         handshake_response = unpacketize_handshake(handshake_response_packet)
         self.last_recv_time = time.time()
         self.total_data_sent += len(handshake_response_packet)
@@ -197,12 +212,12 @@ class Peer:
         self.peer_sock.connected = False
 
     def get_download_speed(self):
-        time_interval = self.last_recv_time - time.time()
+        time_interval = self.start_time - time.time()
         download_speed = self.total_data_recvd / time_interval
         return download_speed
 
     def get_upload_speed(self):
-        time_interval = self.last_recv_time - time.time()
+        time_interval = self.start_time - time.time()
         upload_speed = self.total_data_sent / time_interval
         return upload_speed
 

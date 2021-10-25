@@ -1,6 +1,7 @@
 from collections import deque 
-from peer.packetization import ID
+from bittorrent.peers.packetization import ID
 from piece import Pieces, Piece
+from threading import Thread
 
 def request_pieces(peer, torrent):
     while(peer.connected):
@@ -8,21 +9,23 @@ def request_pieces(peer, torrent):
             rarest_piece = torrent.get_rarest_piece()
             rarest_piece.request(peer)
 
-def handel_peer(peer, torrent):
+def handle_peer(peer, torrent):
 
-    hanshake_response = peer.handshake(torrent.info_hash, torrent.peer_id)
+    handshake_response = peer.handshake(torrent.info_hash, torrent.peer_id)
+    print(handshake_response)
     if(handshake_response[3] != torrent.info_hash):
         peer.close()
         return
 
-    request_thread = Thread(target=request_pieces, args(peer, torrent))
-    request_thread.start()
+    #request_thread = Thread(target=request_pieces, args=(peer, torrent))
+    #request_thread.start()
 
     while(peer.connected):
 
         message = peer.recv_all()
 
         if(message[0] == -1):
+            print("closing")
             peer.close()
 
         elif(message[0] == ID.REQUEST 
@@ -64,7 +67,7 @@ def handel_peer(peer, torrent):
             #for now ignore such messages
             pass
 
-        return
+    return
 
 
 

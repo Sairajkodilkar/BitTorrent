@@ -4,7 +4,7 @@ from bittorrent.packet.packet import (
         PacketFormat
     )
 
-from packetformat import *
+from bittorrent.peers.packetformat import *
 
 LENGHT_LEN        = PacketFormat.INTEGER_SIZE
 HEADER_LEN        = PacketFormat.BYTE_SIZE
@@ -122,6 +122,12 @@ def packetize_port(listen_port:int):
 
     return header + make_pkt(packet_structure)
 
+def unpacketize_handshake_length(packet):
+
+    length = decode_pkt(packet, HANDSHAKE_LEN_FORMAT)
+
+    return length
+
 def unpacketize_handshake(packet):
 
     handshake = decode_pkt(packet, HANDSHAKE_FORMAT)
@@ -152,7 +158,8 @@ def unpacketize_response(packet):
         return (identity,)
 
     if(len(unpacktized) != len(HEADER_FORMAT)):
-        return -1
+        print("not matched", unpacktized, packet)
+        return (-1,)
 
     payload = unpacktized[1]
 
@@ -177,5 +184,6 @@ def unpacketize_response(packet):
     else:
         IndentityError("Wrong ID field in response")
 
-    return identity, *response
+    print("response", response, packet)
+    return (identity, *response)
 

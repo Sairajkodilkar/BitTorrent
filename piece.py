@@ -1,3 +1,5 @@
+import hashlib
+
 class Status:
     REQUESTED   = 1
     DOWNLOADING = 2
@@ -11,30 +13,38 @@ class BlockLengthError(Exception):
 
 class Pieces(list):
 
-    def __init__(self, *args, **kwargs):
-        self.bitfield = bitfield
-        super().__init__(*args, **kwargs)
-
     def add_bitfield(self, bitfield):
         bitfield_int = int.from_bytes(bitfield, "big")
-        for pieces in self:
+        for piece in self:
+            print(piece)
             bit = bitfield_int & 1
             bitfield_int = bitfield_int >> 1
             if(bit):
-                pieces.piece_count += 1
+                piece.piece_count += 1
 
+    def get_bitfield(self):
+        bitfield = 0
+        currentbit = 1
+        for piece in self:
+            if piece.status == Status.COMPLETED:
+                bitfield = bitfield | currentbit 
+            currentbit = currentbit << 1
+        total_pieces = len(self.pieces_list)
+        total_bytes = total_pieces / 8 + total_pieces % 8
+        bitfield_bytes = bitfield.to_bytes(total_bytes, "big")
+        return bitfield
 
 class Piece:
 
     MAX_BLOCK_SIZE = 1<<32
 
-    def __init__(self, index, length, sha, data=None, status=None):
+    def __init__(self, index, length, sha:bytes, data=None, status=None):
         self.index          = index
         self._length        = length
         self.status         = status
         self.sha            = sha
         self.piece_count    = 0           #piece count shows the avalibility of
-        self._data          = BYTEARRAY
+        self._data          = data
 
     def __len__(self):
         return self._length
@@ -48,7 +58,11 @@ class Piece:
             self._data = bytearray(self._length)
         self._data[begin:begin + len(block)] = block
         if(block_index == self._length):
-            self.status = Status.COMPLETED
+            if(self.sha != y.digest()):
+                self._data = None
+                self.status = None
+            else:
+                self.status = Status.COMPLETED
     
     def request(self, peer):
         start = 0
@@ -57,6 +71,9 @@ class Piece:
             peer.request(self.index, start, length)
             start += length
         return
+
+    def __lt__(self, piece2):
+        return self.piece_count < piece2.piece_count
 
     def discard_piece_data(self):
         self._data = None

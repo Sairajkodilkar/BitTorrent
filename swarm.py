@@ -1,28 +1,37 @@
 from collections import deque 
 from bittorrent.peers.packetization import ID
-from piece import Pieces, Piece
+from piece import Pieces, Piece, Status
 from threading import Thread
 
 def request_pieces(peer, torrent):
-    while(peer.connected):
-        if(peer.interested and not peer.chocked_me):
-            rarest_piece = torrent.get_rarest_piece()
-            rarest_piece.request(peer)
+    while(peer.connected and not torrent.completed):
+        if(peer.interested and not peer.choked_me):
+            for rarest_piece in torrent.pieces:
+                print("rarest_piece", rarest_piece.index, peer.pieces[rarest_piece.index].piece_count)
+                if(peer.pieces[rarest_piece.index].piece_count):
+                    print("print requesting piece", rarest_piece.index)
+                    rarest_piece.request(peer)
+                    return
+    return
 
 def handle_peer(peer, torrent):
 
     handshake_response = peer.handshake(torrent.info_hash, torrent.peer_id)
-    print(handshake_response)
     if(handshake_response[3] != torrent.info_hash):
         peer.close()
         return
 
-    #request_thread = Thread(target=request_pieces, args=(peer, torrent))
+    peer.interested(True)
+
+    request_thread = Thread(target=request_pieces, args=(peer, torrent))
     #request_thread.start()
 
     while(peer.connected):
 
-        message = peer.recv_all()
+        try:
+            message = peer.recv_all()
+        except socket.timeout:
+            peer.close()
 
         if(message[0] == -1):
             print("closing")
@@ -49,10 +58,13 @@ def handle_peer(peer, torrent):
         elif(message[0] == ID.PIECE):
             piece = torrent.pieces[message[1]]
             piece.add_block(message[2], message[3])
-            if(piece.completed):
-                torrent.data_file.write_piece(message[1], message[2],
-                                            piece.data)
+            if(piece.status == Status.COMPLETED):
+                print("piece completed", piece.index)
+                torrent.data_file.write_piece(piece.index, piece.data)
                 piece.discard_data()
+
+        elif(message[0] == ID.KEEP_ALIVE):
+            peer.set_timeout(120)
 
         elif(message[0] == ID.BIT_FIELD):
             torrent.pieces.add_bitfield(message[1])
@@ -61,6 +73,7 @@ def handle_peer(peer, torrent):
             pass
 
         elif(message[0] == ID.PORT):
+            #useful in DHT
             pass
 
         else:

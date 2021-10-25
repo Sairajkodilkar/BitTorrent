@@ -10,13 +10,16 @@ class BlockLengthError(Exception):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+class DiscardingError(Exception):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 class Pieces(list):
 
     def add_bitfield(self, bitfield):
         bitfield_int = int.from_bytes(bitfield, "big")
-        for piece in self:
-            print(piece)
+        for piece in reversed(self):
             bit = bitfield_int & 1
             bitfield_int = bitfield_int >> 1
             if(bit):
@@ -36,7 +39,7 @@ class Pieces(list):
 
 class Piece:
 
-    MAX_BLOCK_SIZE = 1<<32
+    MAX_BLOCK_SIZE = 1<<14
 
     def __init__(self, index, length, sha:bytes, data=None, status=None):
         self.index          = index
@@ -54,20 +57,27 @@ class Piece:
         return self._data
 
     def add_block(self, begin, block):
+        print("adding block", begin, "on buffer")
         if(self._data == None):
+            self.status = Status.DOWNLOADING
             self._data = bytearray(self._length)
         self._data[begin:begin + len(block)] = block
-        if(block_index == self._length):
+        if(begin + len(block) == self._length): 
+            print("this was the the last block") 
+            self.status = Status.COMPLETED
+            '''
             if(self.sha != y.digest()):
                 self._data = None
                 self.status = None
             else:
                 self.status = Status.COMPLETED
+            '''
     
     def request(self, peer):
         start = 0
+        self.status = Status.REQUESTED
         while(start < self._length):
-            length = min(self._length - start, MAX_PIECE_SIZE)
+            length = min(self._length - start, self.MAX_BLOCK_SIZE)
             peer.request(self.index, start, length)
             start += length
         return
@@ -75,7 +85,10 @@ class Piece:
     def __lt__(self, piece2):
         return self.piece_count < piece2.piece_count
 
-    def discard_piece_data(self):
+    def discard_data(self):
+        if(self.status == Status.DOWNLOADING):
+            raise DiscardingError("Cant Discard data while the piece is downloading")
+        self.status = None
         self._data = None
 
 

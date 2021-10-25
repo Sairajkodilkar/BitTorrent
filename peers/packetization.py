@@ -29,6 +29,7 @@ class ID:
     PIECE           = 7
     CANCEL          = 8
     PORT            = 9
+    KEEP_ALIVE      = 10
 
 class IndentityError(Exception):
 
@@ -146,7 +147,7 @@ def unpacketize_response(packet):
     #recv completely before unpacking it
     #remove it from here and give it to control to user
     if(len(packet) == 0):
-        return
+        return 
     
     unpacktized = decode_pkt(packet, HEADER_FORMAT)
 
@@ -158,7 +159,6 @@ def unpacketize_response(packet):
         return (identity,)
 
     if(len(unpacktized) != len(HEADER_FORMAT)):
-        print("not matched", unpacktized, packet)
         return (-1,)
 
     payload = unpacktized[1]
@@ -184,6 +184,5 @@ def unpacketize_response(packet):
     else:
         IndentityError("Wrong ID field in response")
 
-    print("response", response, packet)
     return (identity, *response)
 

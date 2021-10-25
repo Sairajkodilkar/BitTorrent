@@ -45,7 +45,7 @@ class Torrent:
         #schedule sorting after every 1 min
 
     def _sort_peers(self):
-        if(selt.torrent_status ==  TorrentStatus.LEECHER):
+        if(self.torrent_status ==  TorrentStatus.LEECHER):
             self.peers.sort(key=Peers.get_download_speed, reverse=True)
         else:
             self.peers.sort(key=Peers.get_upload_speed, reverse=True)
@@ -53,17 +53,15 @@ class Torrent:
     def _sort_piece(self):
         self.pieces.sort()
 
-    def get_rarest_piece(self):
-        for piece in self.pieces:
-            if(piece.piece_count and piece.status == None):
-                return piece
-        return 
-
     def add_peers(self, peers):
         self.peers.append(peers)
 
-    def is_torrent_completed(self):
+    @property
+    def completed(self):
+        if(self.torrent_status == TorrentStatus.SEEDER):
+            return True
         for piece in self.pieces:
             if(piece.status != Status.COMPLETED):
                 return False
+        self.torrent_status = TorrentStatus.SEEDER
         return True

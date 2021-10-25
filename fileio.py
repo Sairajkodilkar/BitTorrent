@@ -13,19 +13,25 @@ class File:
         '''
         pass
 
-    def write_piece(self, piece):
+    def write_piece(self, index, piece):
         '''
         Write the piece to the file
         while writing the piece take care of the boundaries
         '''
+        print("writing piece", piece.index)
         pass
 
-    def read_piece(self, index, begin, length)->Piece:
+    def read_piece(self, index, length)->Piece:
         '''
         read the piece from the file/s
         determine the piece boundries
         '''
-        return piece
+        #return piece
+    
+    def read_block(self, index, begin, length):
+
+        #return block
+        pass
 
     def get_file_name(self, index, begin, length):
         ''' return list of files which is the piece is covering

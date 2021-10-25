@@ -6,7 +6,7 @@ Problems:
         Each peer must have its own thread?
             -But main thread must be able to manage all the thread
             -Main thread should be able to determine download rate and
-                determine to chock
+                determine to choke
             -I might need to make subclass using the threading class and then
                 invoke the peer functions on it
 
@@ -15,9 +15,9 @@ Problems:
         -Need to check the socket state every time.
 
         I should also maintain the states for all the peers:
-            Is he chocking/unchocking me
+            Is he chokeing/unchokeing me
             Is he interested/not interested in me
-            Am I chocking/unchocking him
+            Am I chokeing/unchokeing him
             Am I interested/not interested in him
 
     What exactly is the max block size?
@@ -47,8 +47,8 @@ HANDSHAKE_BUFFER_LEN = 1<<9 #its greater than the max size to have some buffer
 
 class PeerState:
 
-    def __init__(self, chock=False, interested=False, connected=True):
-        self.chock      = chock
+    def __init__(self, choke=True, interested=False, connected=True):
+        self.choke      = choke
         self.interested = interested
         self.connected  = connected #specify if peer close the connection
 
@@ -67,14 +67,14 @@ class Peer:
         self.total_data_recvd = 0
         self.total_data_sent = 0
 
-        self.pieces_list = Pieces(pieces)
+        self.pieces = Pieces(pieces)
 
     @property
-    def chocked(self):
+    def choked(self):
         return self.peer_state.choke
     
     @property
-    def interested(self):
+    def i_am_interested(self):
         return self.my_state.interested
 
     @property
@@ -105,6 +105,8 @@ class Peer:
             return (-1,)
 
         length = unpacketize_length(packet)[0]
+        if(length == 0):
+            return (ID.KEEP_ALIVE,)
 
         data = self.peer_sock.recv(length)
         while(len(data) < length):
@@ -118,11 +120,11 @@ class Peer:
     def decode_data(self, data):
         response = unpacketize_response(data)
         if(response[0] == ID.CHOCK):
-            print("Peer has chocked me")
-            self.my_state.chock = True
+            print("Peer has chokeed me")
+            self.my_state.choke = True
         elif(response[0] == ID.UNCHOCK):
-            print("Peer has unchocked me")
-            self.my_state.chock = False
+            print("Peer has unchoked me")
+            self.my_state.choke = False
         elif(response[0] == ID.INTERESTED):
             print("peer is interested")
             self.peer_state.interested = True
@@ -134,7 +136,7 @@ class Peer:
             self._add_piece(response[1])
         elif(response[0] == ID.BIT_FIELD):
             print("peer sent the bitfield")
-            self.pieces_list.add_bitfield(response[1])
+            self.pieces.add_bitfield(response[1])
 
         return response
 
@@ -149,12 +151,9 @@ class Peer:
         self.send_packet(pkt_content)
 
         handshake_str_len_packet = self.peer_sock.recv(PacketFormat.BYTE_SIZE)
-        print("hanshake str len:", handshake_str_len_packet)
         handshake_str_len = unpacketize_handshake_length(handshake_str_len_packet)[0]
         handshake_str_packet = self.peer_sock.recv(handshake_str_len)
-        print("hanshake str :", handshake_str_packet)
         handshake_remaining = self.peer_sock.recv(48)
-        print("remaining", handshake_remaining)
 
         handshake_response_packet = (handshake_str_len_packet +
                                     handshake_str_packet + handshake_remaining)
@@ -164,12 +163,12 @@ class Peer:
         self.total_data_sent += len(handshake_response_packet)
         return handshake_response
 
-    def chock(self, status):
+    def choke(self, status):
         pkt_content = None
         if(status):
-            pkt_content = packetize_chock()
+            pkt_content = packetize_choke()
         else:
-            pkt_content = packetize_unchock()
+            pkt_content = packetize_unchoke()
         self.send_packet(pkt_content)
         self.peer_state.choke = status
 

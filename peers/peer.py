@@ -62,6 +62,7 @@ class Peer:
         self.my_state = PeerState()
 
         self.start_time = time.time()
+        self.keep_alive_timeout    = 30 
         self.last_send_time = time.time()
         self.last_recv_time = time.time()
         self.total_data_recvd = 0
@@ -205,6 +206,10 @@ class Peer:
         pkt_content = packetize_port(listen_port)
         self.send_packet(pkt_content)
 
+    def keep_alive(self):
+        pkt_content = packetize_keepalive()
+        self.send_packet(pkt_content)
+
     def close(self):
         self.peer_sock.close()
         self.my_state.connected = False
@@ -219,4 +224,6 @@ class Peer:
         time_interval = self.start_time - time.time()
         upload_speed = self.total_data_sent / time_interval
         return upload_speed
+
+
 

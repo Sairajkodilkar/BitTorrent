@@ -1,18 +1,61 @@
-from collections import deque 
 from bittorrent.peers.packetization import ID
 from piece import Pieces, Piece, Status
 from threading import Thread
+import sched
+import time
 
-def request_pieces(peer, torrent):
+#This is not efficient 
+#every peer adds the overhead of 3 threads
+
+#Note that these are 15 seconds smaller than the official time
+KEEP_ALIVE_DATA_TIME = 20
+KEEP_ALIVE_KEEP_TIME = 105
+
+data_sent = False
+
+def cancel_all_events(keep_alive_scheduler):
+    for event in keep_alive_scheduler.queue:
+        keep_alive_scheduler.cancel(event)
+    return
+
+def send_scheduled_keep_alive(peer, keep_alive_scheduler):
+    global data_sent
+    while(True):
+        cancel_all_events(keep_alive_scheduler)
+        if(data_sent):
+            keep_alive_scheduler.enter(KEEP_ALIVE_DATA_TIME, peer.keep_alive)
+            data_sent = False
+        else:
+            keep_alive_scheduler.enter(KEEP_ALIVE_KEEP_TIME, peer.keep_alive)
+        keep_alive_scheduler.run()
+    return
+
+def send_rarest_piece(torrent, peer, keep_alive_scheduler):
+    for rarest_piece in torrent.pieces: 
+        if(rarest_piece.status == None 
+                and peer.pieces[rarest_piece.index].piece_count): 
+
+            data_sent = True 
+            cancel_all_events(keep_alive_scheduler) 
+            rarest_piece.request(peer)
+    return
+
+def request_pieces(peer, torrent, keep_alive_scheduler):
+    #TODO: refactor it
+    global data_sent
     while(peer.connected and not torrent.completed):
         if(peer.interested and not peer.choked_me):
-            for rarest_piece in torrent.pieces:
-                print("rarest_piece", rarest_piece.index, peer.pieces[rarest_piece.index].piece_count)
-                if(peer.pieces[rarest_piece.index].piece_count):
-                    print("print requesting piece", rarest_piece.index)
-                    rarest_piece.request(peer)
-                    return
+            request_rarest_piece(torrent, peer, keep_alive_scheduler)
+
     return
+
+def send_block(torrent, peer, index, begin, length):
+        block = torrent.data_file.read_block(index, begin,length)
+        try:
+            peer.send_block(message[1], message[2], block)
+        except ConnectionError:
+            peer.close()
+        return
 
 def handle_peer(peer, torrent):
 
@@ -23,8 +66,14 @@ def handle_peer(peer, torrent):
 
     peer.interested(True)
 
+    keep_alive_scheduler = shed.scheduler(time.time, time.sleep)
+
+    keep_alive_thread = Thread(target=send_scheduled_keep_alive, 
+                                args=(peer, keep_alive_scheduler))
+    keep_alive_thread.start()
+
     request_thread = Thread(target=request_pieces, args=(peer, torrent))
-    #request_thread.start()
+    request_thread.start()
 
     while(peer.connected):
 
@@ -39,17 +88,12 @@ def handle_peer(peer, torrent):
 
         elif(message[0] == ID.REQUEST 
             and not peer.chocked and peer.interested_in_me):
-            #TODO: use threading
             if(message[3] > Piece.MAX_BLOCK_SIZE):
                 continue
             if(not torrent.pieces[message[1]].completed):
                 continue
-            block = torrent.data_file.read_block(message[1], message[2],
-                                                message[3])
-            try:
-                peer.send_block(message[1], message[2], block)
-            except ConnectionError:
-                peer.close()
+
+            send_block(torrent, peer, message[1], message[2], message[3])
 
         elif(message[0] == ID.HAVE):
             torrent.pieces[message[1]].piece_count += 1
@@ -62,9 +106,6 @@ def handle_peer(peer, torrent):
                 print("piece completed", piece.index)
                 torrent.data_file.write_piece(piece.index, piece.data)
                 piece.discard_data()
-
-        elif(message[0] == ID.KEEP_ALIVE):
-            peer.set_timeout(120)
 
         elif(message[0] == ID.BIT_FIELD):
             torrent.pieces.add_bitfield(message[1])
@@ -79,6 +120,11 @@ def handle_peer(peer, torrent):
         else:
             #for now ignore such messages
             pass
+
+        if(message[0] == ID.KEEP_ALIVE):
+            peer.set_timeout(120)
+        else:
+            peer.set_timeout(30)
 
     return
 

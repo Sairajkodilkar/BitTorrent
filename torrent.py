@@ -25,11 +25,6 @@ class TorrentStatus:
     LEECHER = 1
     SEEDER = 2
 
-#TODO: create pieces class by inheriting the list class
-#   Interface:
-#       1) get_completed_pieces 
-#       2) add_torrent_bitfield
-#       3) add piece
 class Torrent:
 
     def __init__(self, data_file:File, peer_id:bytes, peers:list,

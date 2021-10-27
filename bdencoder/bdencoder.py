@@ -89,7 +89,7 @@ class Bdecoder:
             elif(not ch):
                 return Token(None, Token.EOF_TYPE)
             else:
-                raise BdecodingError(f"Unexpected Type specifier: {ord(ch)}")
+                raise BdecodingError(f"Unexpected Type specifier: {ord(ch)} {ch}")
 
     def readstring(self, strlen):
         if(strlen < 0):

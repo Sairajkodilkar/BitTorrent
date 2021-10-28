@@ -61,12 +61,10 @@ class Peer:
         self.peer_state = PeerState()
         self.my_state = PeerState()
 
-        self.start_time = time.time()
-        self.keep_alive_timeout    = 30 
-        self.last_send_time = time.time()
-        self.last_recv_time = time.time()
-        self.total_data_recvd = 0
-        self.total_data_sent = 0
+        self.start_time         = time.time()
+        self.keep_alive_timeout = 30
+        self.total_data_recvd   = 0
+        self.total_data_sent    = 0
 
         self.pieces = Pieces(pieces)
 
@@ -121,22 +119,16 @@ class Peer:
     def decode_data(self, data):
         response = unpacketize_response(data)
         if(response[0] == ID.CHOCK):
-            print("Peer has chokeed me")
             self.my_state.choke = True
         elif(response[0] == ID.UNCHOCK):
-            print("Peer has unchoked me")
             self.my_state.choke = False
         elif(response[0] == ID.INTERESTED):
-            print("peer is interested")
             self.peer_state.interested = True
         elif(response[0] == ID.NOT_INTERESTED):
-            print("peer is not interested")
             self.peer_state.interested = False
         elif(response[0] == ID.HAVE):
-            print("peer has piece")
             self._add_piece(response[1])
         elif(response[0] == ID.BIT_FIELD):
-            print("peer sent the bitfield")
             self.pieces.add_bitfield(response[1])
 
         return response

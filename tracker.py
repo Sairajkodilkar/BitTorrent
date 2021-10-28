@@ -1,2 +1,1 @@
-from peers.peer import *
 

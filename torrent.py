@@ -45,9 +45,6 @@ class Torrent:
         else:
             self.peers.sort(key=Peers.get_upload_speed, reverse=True)
 
-    def _sort_piece(self):
-        self.pieces.sort()
-
     def add_peers(self, peers):
         self.peers.append(peers)
 

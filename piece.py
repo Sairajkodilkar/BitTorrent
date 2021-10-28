@@ -10,7 +10,7 @@ class BlockLengthError(Exception):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-class DiscardingError(Exception):
+class PieceDiscardingError(Exception):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -57,21 +57,17 @@ class Piece:
         return self._data
 
     def add_block(self, begin, block):
-        print("adding block", begin, "on buffer")
         if(self._data == None):
             self.status = Status.DOWNLOADING
             self._data = bytearray(self._length)
         self._data[begin:begin + len(block)] = block
         if(begin + len(block) == self._length): 
-            print("this was the the last block") 
             self.status = Status.COMPLETED
-            '''
             if(self.sha != y.digest()):
                 self._data = None
                 self.status = None
-            else:
-                self.status = Status.COMPLETED
-            '''
+        return
+
     
     def request(self, peer):
         start = 0
@@ -87,7 +83,7 @@ class Piece:
 
     def discard_data(self):
         if(self.status == Status.DOWNLOADING):
-            raise DiscardingError("Cant Discard data while the piece is downloading")
+            raise PieceDiscardingError("Cant Discard data while the piece is downloading")
         self.status = None
         self._data = None
 

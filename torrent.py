@@ -18,12 +18,15 @@
 #peer_list[peer].he intertest and I unchocked him then simply serve the request
 #                   else ignore the request
 #each peer handler will have the sender and recvr thread where he will use FSM
-from piece import Status, Piece, Pieces
 from bittorrent.fileio import File
+from bittorrent.piece import Status, Piece, Pieces
+from bittorrent.fileio import FileArray
+from bittorrent.peers.peer import Peer
 
 class TorrentStatus:
     LEECHER = 1
-    SEEDER = 2
+    SEEDER  = 2
+    STOPPED = 3
 
 class Torrent:
 
@@ -31,14 +34,14 @@ class Torrent:
             info_hash:bytes,
             pieces:Pieces, torrent_status=TorrentStatus.LEECHER, peer_limit=5):
 
-        self.data_file      = data_file 
+        self.data_files     = data_files
         self.peers          = peers
         self.peer_id        = peer_id
         self.info_hash      = info_hash
         self.torrent_status = torrent_status
         self.pieces         = pieces
         self.peer_limit     = peer_limit
-        self.unchoked_peers  = Peers()
+        self.unchoked_peers = []
         #schedule sorting after every 1 min
 
     def _sort_unchoked_peers(self):
@@ -47,12 +50,13 @@ class Torrent:
         else:
             self.unchoked_peers.sort(key=Peers.get_upload_speed, reverse=True)
 
-    def unchoke_top_peers(torrent):
+    def unchoke_top_peers(self):
         if(not self.unchoked_peers):
-            for i in range(self.peer_limit):
-                self.peers[i].choke(False)
-                self.unchoked_peers.append(self.peers[i])
-                self.peers.pop(i)
+            peer_range = min(len(self.peers), self.peer_limit)
+            for i in range(peer_range):
+                peer = self.peers.pop()
+                peer.choke(False)
+                self.unchoked_peers.append(self.peers)
         else:
             self._sort_unchoked_peers()
 

@@ -40,6 +40,7 @@ Problems:
 
 from bittorrent.peers.packetization import *
 from bittorrent.piece import *
+import errno
 import time
 
 MAX_HANDSHAKE_LEN = 304
@@ -58,7 +59,6 @@ class Peer:
 
     def __init__(self, socket, pieces, peer_limit=5):
         self.peer_sock = socket
-        self.peer_limit = peer_limit
 
         self.peer_state = PeerState()
         self.my_state = PeerState()
@@ -69,10 +69,6 @@ class Peer:
         self.total_data_sent    = 0
 
         self.pieces = Pieces(pieces)
-
-    def unchoke_top_peers(torrent):
-        self._sort_peers()
-        for i in range(self.peer_limit - 1):
 
 
     @property
@@ -99,7 +95,7 @@ class Peer:
         return self.peer_sock.fileno()
 
     def set_timeout(self, timeout):
-        self.socket.settimeout(timeout)
+        self.peer_sock.settimeout(timeout)
 
     def recv_all(self):
         #recv first 4 bytes to determine the length
@@ -134,14 +130,17 @@ class Peer:
         elif(response[0] == ID.NOT_INTERESTED):
             self.peer_state.interested = False
         elif(response[0] == ID.HAVE):
-            self._add_piece(response[1])
+            self.pieces[response[1]].piece_count += 1
         elif(response[0] == ID.BIT_FIELD):
             self.pieces.add_bitfield(response[1])
 
         return response
 
     def send_packet(self, pkt_content):
-        self.peer_sock.sendall(pkt_content)
+        try:
+            self.peer_sock.sendall(pkt_content)
+        except OSError:
+            self.peer_sock.close()
         self.last_send_time = time.time()
         self.total_data_sent += len(pkt_content)
 
@@ -149,10 +148,22 @@ class Peer:
                 request=True):
         pkt_content = packetize_handshake(len(pstr), pstr, 0, info_hash,
                                         peer_id)
-        self.send_packet(pkt_content)
+        try:
+            self.send_packet(pkt_content)
+        except ConnectionError:
+            self.close()
 
-    def recv_handshake():
-        handshake_str_len_packet = self.peer_sock.recv(PacketFormat.BYTE_SIZE)
+        handshake_str_len_packet = None
+        try:
+            handshake_str_len_packet = self.peer_sock.recv(PacketFormat.BYTE_SIZE)
+        except ConnectionError:
+            self.close()
+
+        if(not handshake_str_len_packet):
+            self.close() #peer must have closed the tcp connection
+            raise ConnectionError
+
+        print("handshake", handshake_str_len_packet)
         handshake_str_len = unpacketize_handshake_length(handshake_str_len_packet)[0]
         handshake_str_packet = self.peer_sock.recv(handshake_str_len)
         handshake_remaining = self.peer_sock.recv(48)
@@ -208,13 +219,15 @@ class Peer:
         self.send_packet(pkt_content)
 
     def keep_alive(self):
+        print("FINALLY it is sent")
         pkt_content = packetize_keepalive()
         self.send_packet(pkt_content)
 
     def close(self):
+        print("closing")
         self.peer_sock.close()
         self.my_state.connected = False
-        self.peer_sock.connected = False
+        self.peer_state.connected = False
 
     def get_download_speed(self):
         time_interval = self.start_time - time.time()

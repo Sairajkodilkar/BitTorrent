@@ -61,11 +61,11 @@ def packetize_header(message_len, message_id):
 
     return packet
 
-def packetize_chock():
+def packetize_choke():
 
     return packetize_header(CHOCK_LEN, ID.CHOCK)
 
-def packetize_unchock():
+def packetize_unchoke():
 
     return packetize_header(UNCHOCK_LEN, ID.UNCHOCK)
 

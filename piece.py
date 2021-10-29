@@ -62,13 +62,17 @@ class Piece:
             self._data = bytearray(self._length)
         self._data[begin:begin + len(block)] = block
         if(begin + len(block) == self._length): 
-            self.status = Status.COMPLETED
-            if(self.sha != y.digest()):
+            piece_sha1 = hashlib.sha1(self._data).digest()
+            print(self.index, piece_sha1)
+            if(self.sha != piece_sha1):
+                print("wrong sha1")
                 self._data = None
                 self.status = None
+            else:
+                print("sha matched completed")
+                self.status = Status.COMPLETED
         return
 
-    
     def request(self, peer):
         start = 0
         self.status = Status.REQUESTED

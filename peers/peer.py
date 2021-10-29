@@ -44,6 +44,7 @@ import time
 
 MAX_HANDSHAKE_LEN = 304
 HANDSHAKE_BUFFER_LEN = 1<<9 #its greater than the max size to have some buffer
+PEER_ID_SIZE = 20
 
 class PeerState:
 
@@ -55,8 +56,9 @@ class PeerState:
 
 class Peer:
 
-    def __init__(self, socket, pieces):
+    def __init__(self, socket, pieces, peer_limit=5):
         self.peer_sock = socket
+        self.peer_limit = peer_limit
 
         self.peer_state = PeerState()
         self.my_state = PeerState()
@@ -67,6 +69,11 @@ class Peer:
         self.total_data_sent    = 0
 
         self.pieces = Pieces(pieces)
+
+    def unchoke_top_peers(torrent):
+        self._sort_peers()
+        for i in range(self.peer_limit - 1):
+
 
     @property
     def choked(self):
@@ -138,11 +145,13 @@ class Peer:
         self.last_send_time = time.time()
         self.total_data_sent += len(pkt_content)
 
-    def handshake(self, info_hash, peer_id, pstr=b"BitTorrent protocol"):
+    def send_handshake(self, info_hash, peer_id, pstr=b"BitTorrent protocol",
+                request=True):
         pkt_content = packetize_handshake(len(pstr), pstr, 0, info_hash,
                                         peer_id)
         self.send_packet(pkt_content)
 
+    def recv_handshake():
         handshake_str_len_packet = self.peer_sock.recv(PacketFormat.BYTE_SIZE)
         handshake_str_len = unpacketize_handshake_length(handshake_str_len_packet)[0]
         handshake_str_packet = self.peer_sock.recv(handshake_str_len)

@@ -62,12 +62,19 @@ def send_block(torrent, peer, index, begin, length):
 
 def handle_peer(peer, torrent):
 
-    handshake_response = peer.handshake(torrent.info_hash, torrent.peer_id)
+    peer.set_timeout(30)
+
+    peer.send_handshake(torrent.info_hash, torrent.peer_id)
+    try:
+        handshake_response = peer.recv_handshake()
+    except socket.timeout:
+        peer.close()
+        return
+
     if(handshake_response[3] != torrent.info_hash):
         peer.close()
         return
 
-    peer.set_timeout(30)
 
     keep_alive_scheduler = shed.scheduler(time.time, time.sleep)
 
@@ -102,8 +109,9 @@ def handle_peer(peer, torrent):
         elif(message[0] == ID.BIT_FIELD):
             torrent.pieces.add_bitfield(message[1])
 
-        elif(message[0] == ID.REQUEST 
-            and not peer.chocked and peer.interested_in_me):
+        elif(message[0] == ID.REQUEST):
+            if(peer.chocked or not peer.interested_in_me):
+                continue
             if(message[3] > Piece.MAX_BLOCK_SIZE):
                 continue
             if(not torrent.pieces[message[1]].completed):

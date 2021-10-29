@@ -26,6 +26,9 @@ class File:
     def seek(self, pos, how):
         return os.lseek(self.fd, pos, how)
 
+    def close(self):
+        return os.close(self.fd)
+
 class FileArray:
 
     #if files not none then name must belong to the directory
@@ -62,7 +65,9 @@ class FileArray:
     def _open_files(self, files):
         #TODO handle condition when file exists
         #In that case you have to verify the pieces in the files
+        self.total_size = 0
         for file_name, file_length in files:
+            self.total_size += file_length
             file_stream = File(file_name, "+c")
             self.file_streams.append((file_stream, file_length))
 
@@ -120,6 +125,11 @@ class FileArray:
             file_start += file_length
 
         return files
+
+    def close_all(self):
+        for file_stream, file_length in self.file_streams:
+            file_stream.close()
+        return
     
         
 

@@ -27,9 +27,9 @@ class TorrentStatus:
 
 class Torrent:
 
-    def __init__(self, data_file:File, peer_id:bytes, peers:list,
+    def __init__(self, data_files:FileArray, peer_id:bytes, peers:list,
             info_hash:bytes,
-            pieces:Pieces, torrent_status=TorrentStatus.LEECHER):
+            pieces:Pieces, torrent_status=TorrentStatus.LEECHER, peer_limit=5):
 
         self.data_file      = data_file 
         self.peers          = peers
@@ -37,13 +37,34 @@ class Torrent:
         self.info_hash      = info_hash
         self.torrent_status = torrent_status
         self.pieces         = pieces
+        self.peer_limit     = peer_limit
+        self.unchoked_peers  = Peers()
         #schedule sorting after every 1 min
 
-    def _sort_peers(self):
+    def _sort_unchoked_peers(self):
         if(self.torrent_status ==  TorrentStatus.LEECHER):
-            self.peers.sort(key=Peers.get_download_speed, reverse=True)
+            self.unchoked_peers.sort(key=Peers.get_download_speed, reverse=True)
         else:
-            self.peers.sort(key=Peers.get_upload_speed, reverse=True)
+            self.unchoked_peers.sort(key=Peers.get_upload_speed, reverse=True)
+
+    def unchoke_top_peers(torrent):
+        if(not self.unchoked_peers):
+            for i in range(self.peer_limit):
+                self.peers[i].choke(False)
+                self.unchoked_peers.append(self.peers[i])
+                self.peers.pop(i)
+        else:
+            self._sort_unchoked_peers()
+
+            slowest_peer = self.unchoked_peers.pop()
+            slowest_peer.choke(True)
+            self.peers.append(slowest_peer)
+
+            random_peer_index = randint(0, len(self.peers) - 1)
+            random_peer = self.peers.pop(random_peer_index)
+            random_peer.choke(False)
+            self.unchoked_peers.append(random_peer)
+
 
     def add_peers(self, peers):
         self.peers.append(peers)

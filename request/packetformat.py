@@ -1,5 +1,17 @@
 from bittorrent.packet.packet import PacketFormat 
 
+class Action:
+    CONNECT  = 0
+    ANNOUNCE = 1
+    SCRAPE   = 2
+    ERROR    = 3
+
+class Event:
+    NONE     = 0
+    COMPLETE = 1
+    STARTED  = 2
+    STOPPED  = 3
+    
 RESPONSE_HEADER_FORMAT = [
         PacketFormat.INTEGER,       #action         
         PacketFormat.INTEGER,       #transaction_id

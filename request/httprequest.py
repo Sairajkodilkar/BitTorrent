@@ -18,14 +18,14 @@ class THttpScrapeError(Exception):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-class THttp:
+class HTTPRequest:
 
     def __init__(self, announce_url):
 
         self.announce_url = announce_url
 
-    def announce(self, info_hash, peer_id, port,
-                uploaded, downloaded, left, compact = "1",
+    def announce(self, info_hash, peer_id, downloaded,
+                left, uploaded, port, compact = "1",
                 event = "started", **kwargs):
 
         '''

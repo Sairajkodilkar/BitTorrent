@@ -57,7 +57,7 @@ class PeerState:
 
 class Peer:
 
-    def __init__(self, socket, pieces, peer_limit=5):
+    def __init__(self, socket, pieces):
         self.peer_sock = socket
 
         self.peer_state = PeerState()
@@ -103,7 +103,7 @@ class Peer:
         packet = self.peer_sock.recv(PacketFormat.INTEGER_SIZE)
         self.last_recv_time = time.time()
 
-        if(not packet):
+        if(len(packet) < PacketFormat.INTEGER_SIZE):
             return (-1,)
 
         length = unpacketize_length(packet)[0]
@@ -230,7 +230,7 @@ class Peer:
         self.peer_state.connected = False
 
     def get_download_speed(self):
-        time_interval = self.start_time - time.time()
+        time_interval =  time.time() - self.start_time
         download_speed = self.total_data_recvd / time_interval
         return download_speed
 

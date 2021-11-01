@@ -5,7 +5,7 @@ from bittorrent.request import httprequest, udprequest
 from bittorrent.fileio import FileArray
 from bittorrent.swarm import handle_peer
 from bittorrent.parse import parse_compact_peers, parse_scrape_res
-from bittorrent.piece import Piece, Pieces
+from bittorrent.piece import Piece, Pieces, Status
 from urllib.parse import urlparse
 from threading import Thread
 from hashlib import sha1
@@ -14,6 +14,7 @@ import time
 import socket
 import math
 import copy
+import sched
 
 LISTENING_PORT_START = 6881
 CONNECTION_TIMEOUT   = 5
@@ -47,7 +48,7 @@ def get_file_list(info):
         file_list = []
         for file in info[b'files']:
             file_length = file[b'length']
-            file_name = name + "/" + (b'/'.join(file[b'path'])).decode()
+            file_name = info[b'name'].decode() + "/" + (b'/'.join(file[b'path'])).decode()
             file_list.append((file_name, file_length))
         return file_list
 
@@ -67,6 +68,13 @@ def get_listening_socket():
             break
 
     return listening_socket
+
+def schedule_unchoke(torrent):
+    while(torrent.torrent_status != TorrentStatus.STOPPED):
+        peer_unchoking_scheduler = sched.scheduler(time.time, time.sleep)
+        peer_unchoking_scheduler.enter(60, 1, torrent.unchoke_top_peers)
+        peer_unchoking_scheduler.run()
+    return
 
 def initialize_pieces(total_size, piece_length, pieces_sha1):
     print("piece length", piece_length)
@@ -103,6 +111,24 @@ http_announce_response_names = [
         "interval",
         "peers"
     ]
+
+def start_listening(listening_socket, torrent, pieces, peer_threads):
+    #set the timeout to 10 seconds so that we can check for stop condition
+    listening_socket.settimeout(10)
+    listening_socket.listen(10)
+    while(torrent.torrent_status != TorrentStatus.STOPPED):
+        try:
+            conn, address = listening_socket.accept()
+        except socket.timeout:
+            continue
+        except:
+            raise
+        peer = Peer(listening_socket, copy.deepcopy(pieces))
+        peer_thread = Thread(target=handle_peer, args=(peer, torrent))
+        peer_thread.start()
+        peer_threads.append(peer_thread)
+        torrent.peers.append(peer)
+    return
 
 #read the bit torrent file from the command line
 #FILE PARSING
@@ -161,9 +187,11 @@ def main(torrent_file, peer_limit):
                 client.downloaded, client.left, 
                 client.uploaded, client.port, 
                 key)
-        announce_response_dictionary = dict(zip(announce_response_names,
+        print(announce_response)
+        announce_response_dictionary = dict(zip(udp_announce_response_names,
                                                 announce_response))
 
+    print(announce_response_dictionary)
     peer_address_list = parse_compact_peers(announce_response_dictionary["peers"])
 
     piece_length = info[b'piece length']
@@ -180,14 +208,17 @@ def main(torrent_file, peer_limit):
         try:
             peer_socket.connect(peer_address)
         except (socket.timeout, OSError):
+            print("timeout")
             continue
         peer = Peer(peer_socket, copy.deepcopy(torrent_pieces))
         peer_list.append(peer)
+        print("peer_list")
         peer_limit -= 1
 
     print("creating torrent object")
+    print(peer_list)
     torrent = Torrent(file_array, client.peer_id, peer_list, info_hash,
-                    torrent_pieces)
+                    copy.deepcopy(torrent_pieces))
 
     print('handing peers')
     peer_threads = []
@@ -198,17 +229,38 @@ def main(torrent_file, peer_limit):
 
     print('unchoking peers')
     torrent.unchoke_top_peers()
-    '''
-    peer_unchoking_scheduler = sched.scheduler(time.time, time.sleep)
-    peer_unchoking_scheduler.enter(60, unchoke_peers, arguments=(torrent,))
-    peer_unchoking_scheduler.run()
-    '''
 
-    #time.sleep(2)
+    scheduled_unchoke_thread = Thread(target=schedule_unchoke, args=(torrent,))
+    scheduled_unchoke_thread.start()
+
+    for p in torrent.unchoked_peers:
+        print("downloaded speed", p.get_download_speed())
     #torrent.torrent_status = TorrentStatus.STOPPED
         #create torrent object
         #TODO create listening thread
-    #start_listening(listening_socket, torrent)
+    '''
+    listening_thread = Thread(target=start_listening, args=(listening_socket,
+                                        torrent, torrent_pieces, peer_threads))
+    listening_thread.start()
+    '''
+
+
+    '''
+    while(True):
+        if(not torrent.completed):
+            torrent.torrent_status = TorrentStatus.STOPPED
+            return
+    '''
+
+    piece_count = math.ceil(file_array.total_size / piece_length)
+
+    '''
+    while(True):
+        print("\rCompleted %6.f/%6.f" % (torrent.get_complete_piece_count(), piece_count))
+        time.sleep(0.5)
+        '''
+
+
         #schedule the sorting of peer and chocking/unchocking based on the download
         #speed
         #send interested to the each peer
@@ -217,7 +269,7 @@ def main(torrent_file, peer_limit):
 
 if __name__ == "__main__":
         torrent_file = ("./research/torrentfile/ubuntu-21.04-desktop-amd64.iso.torrent")
-        main(torrent_file, 4)
+        main(torrent_file, 2)
 
 
 

@@ -72,7 +72,7 @@ class FileArray:
             self.file_streams.append((file_stream, file_length))
 
     def read_block(self, index, begin, length):
-        print("reading block")
+        #print("reading block")
         block = b''
         files = self.get_block_files(index, begin, length)
         offset = self.get_block_offset(index, begin)
@@ -86,7 +86,7 @@ class FileArray:
 
     def write_block(self, index, begin, block):
         #write the piece to the file
-        print("writing block", index)
+        #print("writing block", index)
         files = self.get_block_files(index, begin, len(block))
         offset = self.get_block_offset(index, begin)
         start = 0

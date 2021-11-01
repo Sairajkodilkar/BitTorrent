@@ -19,11 +19,14 @@ class Pieces(list):
 
     def add_bitfield(self, bitfield):
         bitfield_int = int.from_bytes(bitfield, "big")
-        for piece in reversed(self):
-            bit = bitfield_int & 1
-            bitfield_int = bitfield_int >> 1
-            if(bit):
-                piece.piece_count += 1
+        index = len(self) - 1
+        while(bitfield_int):
+            bit = bitfield_int & 0x01
+            self[index].piece_count += bit
+            bitfield_int >>= 1
+            index -= 1
+        return
+
 
     def get_bitfield(self):
         bitfield = 0
@@ -44,7 +47,7 @@ class Piece:
     def __init__(self, index, length, sha:bytes, data=None, status=None):
         self.index          = index
         self._length        = length
-        self.status         = status
+        self._status         = status
         self.sha            = sha
         self.piece_count    = 0           #piece count shows the avalibility of
         self._data          = data
@@ -56,6 +59,14 @@ class Piece:
     def data(self):
         return self._data
 
+    @property
+    def status(self):
+        return self._status
+    
+    @status.setter
+    def status(self, value):
+        self._status = value
+    
     def add_block(self, begin, block):
         if(self._data == None):
             self.status = Status.DOWNLOADING
@@ -63,13 +74,13 @@ class Piece:
         self._data[begin:begin + len(block)] = block
         if(begin + len(block) == self._length): 
             piece_sha1 = hashlib.sha1(self._data).digest()
-            print(self.index, piece_sha1)
+            #print(self.index, piece_sha1)
             if(self.sha != piece_sha1):
-                print("wrong sha1")
+                #print("wrong sha1")
                 self._data = None
                 self.status = None
             else:
-                print("sha matched completed")
+                #print("sha matched completed")
                 self.status = Status.COMPLETED
         return
 
@@ -87,8 +98,8 @@ class Piece:
 
     def discard_data(self):
         if(self.status == Status.DOWNLOADING):
+            self.status = None
             raise PieceDiscardingError("Cant Discard data while the piece is downloading")
-        self.status = None
         self._data = None
 
 

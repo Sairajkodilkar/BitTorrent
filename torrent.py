@@ -22,6 +22,7 @@ from bittorrent.fileio import File
 from bittorrent.piece import Status, Piece, Pieces
 from bittorrent.fileio import FileArray
 from bittorrent.peers.peer import Peer
+from random import randint
 
 class TorrentStatus:
     LEECHER = 1
@@ -46,9 +47,9 @@ class Torrent:
 
     def _sort_unchoked_peers(self):
         if(self.torrent_status ==  TorrentStatus.LEECHER):
-            self.unchoked_peers.sort(key=Peers.get_download_speed, reverse=True)
+            self.unchoked_peers.sort(key=Peer.get_download_speed, reverse=True)
         else:
-            self.unchoked_peers.sort(key=Peers.get_upload_speed, reverse=True)
+            self.unchoked_peers.sort(key=Peer.get_upload_speed, reverse=True)
 
     def unchoke_top_peers(self):
         if(not self.unchoked_peers):
@@ -56,7 +57,7 @@ class Torrent:
             for i in range(peer_range):
                 peer = self.peers.pop()
                 peer.choke(False)
-                self.unchoked_peers.append(self.peers)
+                self.unchoked_peers.append(peer)
         else:
             self._sort_unchoked_peers()
 
@@ -82,3 +83,12 @@ class Torrent:
                 return False
         self.torrent_status = TorrentStatus.SEEDER
         return True
+
+    def get_complete_piece_count(self):
+        count = 0
+        for piece in self.pieces:
+            if(piece.status == Status.COMPLETED):
+                count += 1
+        return count
+
+

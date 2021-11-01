@@ -35,6 +35,7 @@ def send_scheduled_keep_alive(torrent, peer, keep_alive_scheduler):
         try:
             keep_alive_scheduler.run()
         except ConnectionError:
+            print("connection error")
             clear_pieces_status(peer, torrent)
             peer.close()
     print('exiting send')
@@ -50,13 +51,14 @@ def request_rarest_piece(torrent, peer, keep_alive_scheduler):
             data_sent = True 
             cancel_all_events(keep_alive_scheduler) 
             rarest_piece.request(peer)
-    return
+            print(rarest_piece.status)
+            return
 
 def clear_pieces_status(peer, torrent):
     for piece in peer.pieces:
-        if(piece.status == Status.DOWNLOADING):
+        if(piece.status != Status.COMPLETED):
             print("clearing")
-            pieces_status = Status.DOWNLOADING
+            piece.status = None
             torrent.pieces[piece.index].status = None
 
 def request_pieces(peer, torrent, keep_alive_scheduler, request_event):
@@ -122,10 +124,11 @@ def handle_peer(peer, torrent):
             message = peer.recv_all()
         except (socket.timeout, ConnectionResetError):
             #print("socket timeout")
+            print("conn reset")
             peer.close()
 
         if(message[0] == -1):
-            #print("message -1")
+            print("message -1")
             peer.close()
 
         elif(message[0] == ID.CHOCK):
@@ -159,8 +162,8 @@ def handle_peer(peer, torrent):
 
         elif(message[0] == ID.PIECE):
             print("recved block", message[1], message[2], file=sys.stderr)
-            if(torrent.pieces[1].status == Status.COMPLETED):
-                print("recved again")
+            if(torrent.pieces[message[1]].status == Status.COMPLETED):
+                print("recved again", message[1])
                 continue
             tpiece = torrent.pieces[message[1]]
             ppiece = peer.pieces[message[1]]
@@ -171,7 +174,6 @@ def handle_peer(peer, torrent):
                 ppiece.status = Status.COMPLETED
                 torrent.data_files.write_block(tpiece.index, 0, tpiece.data)
                 tpiece.discard_data()
-                break
 
         elif(message[0] == ID.HAVE):
             torrent.pieces[message[1]].piece_count += 1
@@ -193,6 +195,7 @@ def handle_peer(peer, torrent):
             else:
                 peer.set_timeout(30)
         except OSError:
+            print("os error")
             peer.close()
 
     cancel_all_events(keep_alive_scheduler)

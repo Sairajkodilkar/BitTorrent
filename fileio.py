@@ -1,6 +1,7 @@
 from bittorrent.piece import *
-import os
 import errno
+import stat
+import os
 
 class File:
 
@@ -11,11 +12,13 @@ class File:
             "c":os.O_CREAT
         }
 
+    permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+
     def __init__(self, file_name, mode):
         flag = 0
         for i in mode:
             flag |= self.flags[i]
-        self.fd = os.open(file_name, flag)
+        self.fd = os.open(file_name, flag, self.permissions)
 
     def write(self, byte_str):
         return os.write(self.fd, byte_str)

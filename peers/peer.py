@@ -100,10 +100,13 @@ class Peer:
     def recv_all(self):
         #recv first 4 bytes to determine the length
         #The user should use try to see if pipe is broken or not
-        packet = self.peer_sock.recv(PacketFormat.INTEGER_SIZE)
-        self.last_recv_time = time.time()
+        packet = b''
+        while(len(packet) < PacketFormat.INTEGER_SIZE):
+            packet += self.peer_sock.recv(PacketFormat.INTEGER_SIZE - len(packet))
+            self.last_recv_time = time.time()
 
         if(len(packet) < PacketFormat.INTEGER_SIZE):
+            print('return -1', packet)
             return (-1,)
 
         length = unpacketize_length(packet)[0]
@@ -219,12 +222,10 @@ class Peer:
         self.send_packet(pkt_content)
 
     def keep_alive(self):
-        print("FINALLY it is sent")
         pkt_content = packetize_keepalive()
         self.send_packet(pkt_content)
 
     def close(self):
-        print("closing")
         self.peer_sock.close()
         self.my_state.connected = False
         self.peer_state.connected = False

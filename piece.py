@@ -68,7 +68,6 @@ class Piece:
         self._status = value
     
     def add_block(self, begin, block):
-        print("addding block")
         if(self._data == None):
             self.status = Status.DOWNLOADING
             self._data = bytearray(self._length)

@@ -6,12 +6,13 @@ from bittorrent.fileio import FileArray
 from bittorrent.swarm import handle_peer
 from bittorrent.parse import parse_compact_peers, parse_scrape_res
 from bittorrent.piece import Piece, Pieces, Status
+from random import randint, randbytes
 from urllib.parse import urlparse
 from threading import Thread
 from hashlib import sha1
-from random import randint, randbytes
-import time
+import sys
 import socket
+import time
 import math
 import copy
 import sched
@@ -71,6 +72,7 @@ def get_listening_socket():
 
 def schedule_unchoke(torrent):
     while(torrent.torrent_status != TorrentStatus.STOPPED):
+        print("sorting")
         peer_unchoking_scheduler = sched.scheduler(time.time, time.sleep)
         peer_unchoking_scheduler.enter(60, 1, torrent.unchoke_top_peers)
         peer_unchoking_scheduler.run()
@@ -124,6 +126,8 @@ def start_listening(listening_socket, torrent, pieces, peer_threads):
         except:
             raise
         peer = Peer(listening_socket, copy.deepcopy(pieces))
+        bitfield = torrent.pieces.get_bitfield()
+        peer.send(bitfield)
         peer_thread = Thread(target=handle_peer, args=(peer, torrent))
         peer_thread.start()
         peer_threads.append(peer_thread)
@@ -141,6 +145,7 @@ def main(torrent_file, peer_limit):
     #FILE OPENING
     file_list = get_file_list(info)
     file_array = FileArray(file_list, info[b'piece length'])
+    print("total size", file_array.total_size)
 
     #GLOBALS
     listening_socket         = get_listening_socket()
@@ -152,11 +157,12 @@ def main(torrent_file, peer_limit):
                         randbytes(PEER_ID_SIZE), listening_socket_address[1], 
                         0, file_array.total_size, 0)
 
-    #ANNOUNCING
-    url_parse_object = urlparse(announce_url)
-
     tracker_type      = None
     tracker           = None
+
+
+    #ANNOUNCING
+    url_parse_object = urlparse(announce_url)
 
     announce_response_dictionary = {}
 
@@ -228,17 +234,18 @@ def main(torrent_file, peer_limit):
         peer_threads.append(peer_thread)
 
     print('unchoking peers')
-    torrent.unchoke_top_peers()
+    torrent.unchoke_top_peers(6)
 
     scheduled_unchoke_thread = Thread(target=schedule_unchoke, args=(torrent,))
     scheduled_unchoke_thread.start()
+    print("unchoking started")
 
     for p in torrent.unchoked_peers:
         print("downloaded speed", p.get_download_speed())
     #torrent.torrent_status = TorrentStatus.STOPPED
         #create torrent object
         #TODO create listening thread
-    '''
+        '''
     listening_thread = Thread(target=start_listening, args=(listening_socket,
                                         torrent, torrent_pieces, peer_threads))
     listening_thread.start()
@@ -254,11 +261,10 @@ def main(torrent_file, peer_limit):
 
     piece_count = math.ceil(file_array.total_size / piece_length)
 
-    '''
     while(True):
-        print("\rCompleted %6.f/%6.f" % (torrent.get_complete_piece_count(), piece_count))
+        print("\rCompleted %6.f/%6.f" % (torrent.get_complete_piece_count(),
+            piece_count), end='')
         time.sleep(0.5)
-        '''
 
 
         #schedule the sorting of peer and chocking/unchocking based on the download
@@ -268,8 +274,8 @@ def main(torrent_file, peer_limit):
 
 
 if __name__ == "__main__":
-        torrent_file = ("./research/torrentfile/ubuntu-21.04-desktop-amd64.iso.torrent")
-        main(torrent_file, 1)
+        torrent_file = ("./research/torrentfile/manjaro.torrent")
+        main(torrent_file, 20)
 
 
 

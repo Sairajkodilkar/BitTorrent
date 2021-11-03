@@ -33,7 +33,7 @@ class Torrent:
 
     def __init__(self, data_files:FileArray, peer_id:bytes, peers:list,
             info_hash:bytes,
-            pieces:Pieces, torrent_status=TorrentStatus.LEECHER, peer_limit=5):
+            pieces:Pieces, torrent_status=TorrentStatus.LEECHER):
 
         self.data_files     = data_files
         self.peers          = peers
@@ -41,7 +41,6 @@ class Torrent:
         self.info_hash      = info_hash
         self.torrent_status = torrent_status
         self.pieces         = pieces
-        self.peer_limit     = peer_limit
         self.unchoked_peers = []
         #schedule sorting after every 1 min
 
@@ -51,9 +50,11 @@ class Torrent:
         else:
             self.unchoked_peers.sort(key=Peer.get_upload_speed, reverse=True)
 
-    def unchoke_top_peers(self):
+    def unchoke_top_peers(self, peer_limit=5):
+        #TODO unchoke only when they are interested
+        #This method will unchoke the seeders also which is not good
         if(not self.unchoked_peers):
-            peer_range = min(len(self.peers), self.peer_limit)
+            peer_range = min(len(self.peers), peer_limit)
             for i in range(peer_range):
                 peer = self.peers.pop()
                 peer.choke(False)
@@ -69,6 +70,7 @@ class Torrent:
             random_peer = self.peers.pop(random_peer_index)
             random_peer.choke(False)
             self.unchoked_peers.append(random_peer)
+        print("unchoked len", len(self.unchoked_peers))
 
 
     def add_peers(self, peers):

@@ -1,7 +1,8 @@
 from bittorrent.peers.packetization import ID
-from bittorrent.piece import Pieces, Piece, Status
-from threading import Thread, Event
 from bittorrent.torrent import TorrentStatus
+from bittorrent.piece import Pieces, Piece, PieceStatus
+
+from threading import Thread, Event
 import socket
 import sched
 import time
@@ -16,7 +17,6 @@ KEEP_ALIVE_KEEP_TIME = 20
 
 REQUEST_EVENT_TIMEOUT = 30
 
-data_sent = False
 
 def cancel_all_events(keep_alive_scheduler):
     for event in keep_alive_scheduler.queue:
@@ -24,12 +24,11 @@ def cancel_all_events(keep_alive_scheduler):
     return
 
 def send_scheduled_keep_alive(torrent, peer, keep_alive_scheduler):
-    global data_sent
-    while(peer.connected and torrent.torrent_status != TorrentStatus.STOPPED):
+    while(peer.connected):
         cancel_all_events(keep_alive_scheduler)
-        if(data_sent):
+        if(torrent.data_sent):
             keep_alive_scheduler.enter(KEEP_ALIVE_DATA_TIME, 1, peer.keep_alive)
-            data_sent = False
+            torrent.data_sent = False
         else:
             keep_alive_scheduler.enter(KEEP_ALIVE_KEEP_TIME, 1, peer.keep_alive)
         try:
@@ -37,17 +36,17 @@ def send_scheduled_keep_alive(torrent, peer, keep_alive_scheduler):
         except ConnectionError:
             print("connection error")
             peer.close()
-    print('exiting send', peer.connected, torrent.torrent_status)
+    print('exiting send', peer.connected, torrent.get_status())
     return
 
 def request_rarest_piece(torrent, peer, keep_alive_scheduler):
     #for rarest_piece in sorted(torrent.pieces, reverse=True): 
     for rarest_piece in sorted(torrent.pieces, reverse=True): 
-        if(rarest_piece.status == None 
+        if(rarest_piece.get_status() == None 
                 and peer.pieces[rarest_piece.index].piece_count): 
 
             #print("requesting piece", rarest_piece.index)
-            data_sent = True 
+            torrent.data_sent = True 
             cancel_all_events(keep_alive_scheduler) 
             rarest_piece.request(peer)
             #print(rarest_piece.status)
@@ -55,19 +54,18 @@ def request_rarest_piece(torrent, peer, keep_alive_scheduler):
 
 def clear_pieces_status(peer, torrent):
     for piece in peer.pieces:
-        if(piece.status != Status.COMPLETED 
-                and torrent.pieces[piece.index].status != Status.COMPLETED):
+        if(piece.get_status() != PieceStatus.COMPLETED 
+                and torrent.pieces[piece.index].get_status() != PieceStatus.COMPLETED):
 
             #print("clearing", piece.index)
-            piece.status = None
-            torrent.pieces[piece.index].status = None
+            piece.set_status(None)
+            torrent.pieces[piece.index].set_status(None)
             torrent.pieces[piece.index].discard_data()
 
 def request_pieces(peer, torrent, keep_alive_scheduler, request_event):
     #TODO: refactor it
-    global data_sent
-    while(peer.connected and not torrent.completed and 
-            torrent.torrent_status != TorrentStatus.STOPPED):
+    while(peer.connected and torrent.get_status() == TorrentStatus.LEECHER):
+
         if(request_event.wait(REQUEST_EVENT_TIMEOUT) 
             and peer.i_am_interested and not peer.choked_me):
 
@@ -100,14 +98,19 @@ def send_scheduled_have(torrent, peer):
 
 def handle_peer(peer, torrent):
 
+    torrent.data_sent = False
     peer.set_timeout(REQUEST_EVENT_TIMEOUT)
     #print("handling peer")
 
     handshake_response = None
     try:
         handshake_response = peer.send_handshake(torrent.info_hash, torrent.peer_id)
-    except (socket.timeout, ConnectionError):
-        print("timeout or connection error occured aborting")
+    except socket.timeout:
+        print("timeout")
+        peer.close()
+        return
+    except ConnectionError:
+        print("connection error")
         peer.close()
         return
 
@@ -133,9 +136,9 @@ def handle_peer(peer, torrent):
     send_scheduled_have_thread.start()
 
     #print("starting main loop")
-    while(peer.connected and torrent.torrent_status != TorrentStatus.STOPPED):
+    while(peer.connected and torrent.get_status() != TorrentStatus.STOPPED):
 
-        if(torrent.completed == True):
+        if(torrent.get_status() == TorrentStatus.SEEDER):
             raise Exception("Torrent is completed now")
 
         try:
@@ -177,23 +180,23 @@ def handle_peer(peer, torrent):
             if(not torrent.pieces[message[1]].completed):
                 continue
             send_block(torrent, peer, message[1], message[2], message[3])
-            data_sent = True
+            torrent.data_sent = True
             cancel_all_events(keep_alive_scheduler)
 
         elif(message[0] == ID.PIECE):
             #print("recved block", message[1], message[2], file=sys.stderr)
-            if(torrent.pieces[message[1]].status == Status.COMPLETED):
+            if(torrent.pieces[message[1]].get_status() == PieceStatus.COMPLETED):
                 #print("recved again", message[1])
                 continue
             tpiece = torrent.pieces[message[1]]
             ppiece = peer.pieces[message[1]]
-            ppiece.status = Status.DOWNLOADING
+            ppiece.set_status(PieceStatus.DOWNLOADING)
             tpiece.add_block(message[2], message[3])
-            if(tpiece.status == Status.COMPLETED):
-                ppiece.status = Status.COMPLETED
-                #print("this is completed", ppiece.status == Status.COMPLETED, message[1], torrent.pieces[message[1]].status)
+            if(tpiece.get_status() == PieceStatus.COMPLETED):
+                ppiece.set_status(PieceStatus.COMPLETED)
                 torrent.data_files.write_block(tpiece.index, 0, tpiece.data)
                 tpiece.discard_data()
+                #print("this is completed", ppiece.status == PieceStatus.COMPLETED, message[1], torrent.pieces[message[1]].status)
 
         elif(message[0] == ID.HAVE):
             torrent.pieces[message[1]].piece_count += 1
@@ -215,7 +218,7 @@ def handle_peer(peer, torrent):
             else:
                 peer.set_timeout(30)
         except OSError:
-            print("os error", peer.peer_sock.getpeername())
+            #print("os error", peer.peer_sock.getpeername())
             peer.close()
 
     cancel_all_events(keep_alive_scheduler)

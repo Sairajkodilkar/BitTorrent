@@ -19,7 +19,7 @@
 #                   else ignore the request
 #each peer handler will have the sender and recvr thread where he will use FSM
 from bittorrent.fileio import File
-from bittorrent.piece import Status, Piece, Pieces
+from bittorrent.piece import PieceStatus, Piece, Pieces
 from bittorrent.fileio import FileArray
 from bittorrent.peers.peer import Peer
 from random import randint
@@ -33,64 +33,80 @@ class Torrent:
 
     def __init__(self, data_files:FileArray, peer_id:bytes, peers:list,
             info_hash:bytes,
-            pieces:Pieces, torrent_status=TorrentStatus.LEECHER):
+            pieces:Pieces, status=TorrentStatus.LEECHER):
 
-        self.data_files     = data_files
         self.peers          = peers
-        self.peer_id        = peer_id
-        self.info_hash      = info_hash
-        self.torrent_status = torrent_status
         self.pieces         = pieces
-        self.unchoked_peers = []
+
+        self._data_files     = data_files
+        self._peer_id        = peer_id
+        self._info_hash      = info_hash
+        self._status         = status
+        self._unchoked_peers = []
         #schedule sorting after every 1 min
 
+    def get_status(self):
+        if(self._status == TorrentStatus.SEEDER
+                or self._status == TorrentStatus.STOPPED):
+            return self._status
+
+        for piece in self.pieces:
+            if(piece.get_status() != PieceStatus.COMPLETED):
+                return TorrentStatus.LEECHER
+
+        self._status = TorrentStatus.SEEDER
+        return self._status
+
+    def set_status(self, value):
+        self._status = value
+        return
+
+    @property
+    def peer_id(self):
+        return self._peer_id
+
+    @property
+    def info_hash(self):
+        return self._info_hash
+    
+    @property
+    def data_files(self):
+        return self._data_files
+
     def _sort_unchoked_peers(self):
-        if(self.torrent_status ==  TorrentStatus.LEECHER):
-            self.unchoked_peers.sort(key=Peer.get_download_speed, reverse=True)
+        if(self._status ==  TorrentStatus.LEECHER):
+            self._unchoked_peers.sort(key=Peer.get_download_speed, reverse=True)
         else:
-            self.unchoked_peers.sort(key=Peer.get_upload_speed, reverse=True)
+            self._unchoked_peers.sort(key=Peer.get_upload_speed, reverse=True)
 
     def unchoke_top_peers(self, peer_limit=5):
         #TODO unchoke only when they are interested
         #This method will unchoke the seeders also which is not good
-        if(not self.unchoked_peers):
+        if(not self._unchoked_peers):
             peer_range = min(len(self.peers), peer_limit)
             for i in range(peer_range):
                 peer = self.peers.pop()
                 peer.choke(False)
-                self.unchoked_peers.append(peer)
+                self._unchoked_peers.append(peer)
         else:
             self._sort_unchoked_peers()
 
-            slowest_peer = self.unchoked_peers.pop()
+            slowest_peer = self._unchoked_peers.pop()
             slowest_peer.choke(True)
             self.peers.append(slowest_peer)
 
             random_peer_index = randint(0, len(self.peers) - 1)
             random_peer = self.peers.pop(random_peer_index)
             random_peer.choke(False)
-            self.unchoked_peers.append(random_peer)
-        print("unchoked len", len(self.unchoked_peers))
-
+            self._unchoked_peers.append(random_peer)
+        print("unchoked len", len(self._unchoked_peers))
 
     def add_peers(self, peers):
         self.peers.append(peers)
 
-    @property
-    def completed(self):
-        if(self.torrent_status == TorrentStatus.SEEDER):
-            return True
-        for piece in self.pieces:
-            if(piece.status != Status.COMPLETED):
-                return False
-        self.torrent_status = TorrentStatus.SEEDER
-        return True
-
-    def get_complete_piece_count(self):
+    def get_completed_piece_count(self):
         count = 0
         for piece in self.pieces:
-            if(piece.status == Status.COMPLETED):
+            if(piece.get_status() == PieceStatus.COMPLETED):
                 count += 1
         return count
-
-

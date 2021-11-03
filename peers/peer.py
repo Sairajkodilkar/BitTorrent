@@ -166,7 +166,6 @@ class Peer:
             self.close() #peer must have closed the tcp connection
             raise ConnectionError
 
-        print("handshake", handshake_str_len_packet)
         handshake_str_len = unpacketize_handshake_length(handshake_str_len_packet)[0]
         handshake_str_packet = self.peer_sock.recv(handshake_str_len)
         handshake_remaining = self.peer_sock.recv(48)
@@ -222,6 +221,7 @@ class Peer:
         self.send_packet(pkt_content)
 
     def keep_alive(self):
+        print("sending keep alive")
         pkt_content = packetize_keepalive()
         self.send_packet(pkt_content)
 

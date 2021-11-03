@@ -30,7 +30,7 @@ class Pieces(list):
     def get_bitfield(self):
         bitfield = 0
         currentbit = 1
-        for piece in self:
+        for piece in reversed(self):
             if piece.get_status() == PieceStatus.COMPLETED:
                 bitfield = bitfield | currentbit 
             currentbit = currentbit << 1

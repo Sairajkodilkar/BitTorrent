@@ -45,7 +45,7 @@ def request_rarest_piece(torrent, peer, keep_alive_scheduler):
         if(rarest_piece.get_status() == None 
                 and peer.pieces[rarest_piece.index].piece_count): 
 
-            #print("requesting piece", rarest_piece.index)
+            print("requesting piece", rarest_piece.index)
             torrent.data_sent = True 
             cancel_all_events(keep_alive_scheduler) 
             rarest_piece.request(peer)
@@ -61,6 +61,7 @@ def clear_pieces_status(peer, torrent):
             piece.set_status(None)
             torrent.pieces[piece.index].set_status(None)
             torrent.pieces[piece.index].discard_data()
+    return
 
 def request_pieces(peer, torrent, keep_alive_scheduler, request_event):
     #TODO: refactor it
@@ -72,6 +73,7 @@ def request_pieces(peer, torrent, keep_alive_scheduler, request_event):
             #print("requesting")
             request_rarest_piece(torrent, peer, keep_alive_scheduler)
             time.sleep(0.2)
+            return
     return
 
 def send_block(torrent, peer, index, begin, length):
@@ -177,6 +179,7 @@ def handle_peer(peer, torrent):
                 if(p.piece_count):
                     c += 1
             print("bitfield count", len(torrent.pieces), c)
+            print(message[1])
 
 
         elif(message[0] == ID.REQUEST):
@@ -188,7 +191,7 @@ def handle_peer(peer, torrent):
                 print("aborting 2")
                 continue
             if(torrent.pieces[message[1]].get_status() != PieceStatus.COMPLETED):
-                print('aborting 3', torrent.pieces[message[1]].get_status())
+                print('aborting 3', message[1], torrent.pieces[message[1]].get_status())
                 continue
             print("serving request")
             send_block(torrent, peer, message[1], message[2], message[3])

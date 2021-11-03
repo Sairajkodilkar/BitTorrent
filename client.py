@@ -296,7 +296,7 @@ def main(torrent_file, peer_limit):
 
 if __name__ == "__main__":
         torrent_file = ("./research/torrentfile/ubuntu-21.04-desktop-amd64.iso.torrent")
-        main(torrent_file, 20)
+        main(torrent_file, 1)
 
 
 

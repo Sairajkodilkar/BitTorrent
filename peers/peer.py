@@ -151,6 +151,7 @@ class Peer:
                 request=True):
         pkt_content = packetize_handshake(len(pstr), pstr, 0, info_hash,
                                         peer_id)
+        print("sending", pkt_content)
         try:
             self.send_packet(pkt_content)
         except ConnectionError:
@@ -166,13 +167,16 @@ class Peer:
             self.close() #peer must have closed the tcp connection
             raise ConnectionError
 
+        print("str len", handshake_str_len_packet)
         handshake_str_len = unpacketize_handshake_length(handshake_str_len_packet)[0]
         handshake_str_packet = self.peer_sock.recv(handshake_str_len)
+        print("str", handshake_str_packet)
         handshake_remaining = self.peer_sock.recv(48)
 
         handshake_response_packet = (handshake_str_len_packet +
                                     handshake_str_packet + handshake_remaining)
 
+        print("remaining", handshake_remaining)
         handshake_response = unpacketize_handshake(handshake_response_packet)
         self.last_recv_time = time.time()
         self.total_data_sent += len(handshake_response_packet)
@@ -201,8 +205,11 @@ class Peer:
         self.send_packet(pkt_content)
 
     def send_bitfield(self, bitfield):
+        print("bitfield sending")
         pkt_content = packetize_bitfield(bitfield)
+        print("making bitfield")
         self.send_packet(pkt_content)
+        print("bitfield sent")
 
     def request(self, index, begin, length):
         pkt_content = packetize_request(index, begin, length)

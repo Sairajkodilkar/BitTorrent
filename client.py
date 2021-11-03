@@ -16,17 +16,19 @@ import time
 import math
 import copy
 import sched
+import errno
 
 LISTENING_PORT_START = 6881
 CONNECTION_TIMEOUT   = 5
 
 class Client:
 
-    def __init__(self, listening_socket, 
+    def __init__(self, listening_socket, info_hash,
                 transaction_id, peer_id, port,
                 downloaded, left, uploaded):
 
         self.listening_socket = listening_socket
+        self.info_hash        = info_hash
         self.transaction_id   = transaction_id 
         self.peer_id          = peer_id 
         self.port             = port
@@ -96,8 +98,6 @@ def initialize_pieces(total_size, piece_length, pieces_sha1):
 
     return pieces
 
-
-
 udp_announce_response_names = [
         "action", 
         "transaction_id", 
@@ -121,18 +121,57 @@ def start_listening(listening_socket, torrent, pieces, peer_threads):
     while(torrent.get_status() != TorrentStatus.STOPPED):
         try:
             conn, address = listening_socket.accept()
+            print("========================accepted")
         except socket.timeout:
+            print("continue")
             continue
         except:
             raise
-        peer = Peer(listening_socket, copy.deepcopy(pieces))
-        bitfield = torrent.pieces.get_bitfield()
-        peer.send(bitfield)
+        print("here i am")
+        peer = Peer(conn, copy.deepcopy(pieces))
+        print("sending choke")
+        #peer.choke(False)
         peer_thread = Thread(target=handle_peer, args=(peer, torrent))
         peer_thread.start()
         peer_threads.append(peer_thread)
         torrent.peers.append(peer)
     return
+
+def get_announce_response(tracker_url, client):
+    url_parse_object = urlparse(tracker_url)
+
+    announce_response_dictionary = {}
+
+    if(url_parse_object.scheme == 'http' or url_parse_object.scheme == 'https'):
+        tracker_type = 'http'
+        tracker = httprequest.HTTPRequest(tracker_url)
+        announce_response = tracker.announce(client.info_hash, client.peer_id, 
+                client.downloaded, client.left,
+                client.uploaded, client.port, num_want=50)
+        announce_decoder = Bdecoder(announce_response, "b")
+        announce_response_bdictionary = announce_decoder.decode()[0]
+        for key, value in announce_response_bdictionary.items():
+            if(key == b'peers'):
+                announce_response_dictionary[key.decode()] = value
+            else:
+                announce_response_dictionary[key.decode()] = int(value)
+    else:
+        tracker_type = 'udp'
+        tracker = udprequest.UDPRequest(tracker_url)
+        try:
+            action, transaction_id, connection_id = tracker.connect(client.transaction_id)
+        except socket.timeout:
+            raise
+        key = randint(1, 1 << 31 - 1)
+        announce_response = tracker.announce(connection_id, client.transaction_id,
+                client.info_hash, client.peer_id, 
+                client.downloaded, client.left, 
+                client.uploaded, client.port, 
+                key)
+        announce_response_dictionary = dict(zip(udp_announce_response_names,
+                                                announce_response))
+
+    return announce_response_dictionary
 
 #read the bit torrent file from the command line
 #FILE PARSING
@@ -154,53 +193,35 @@ def main(torrent_file, peer_limit):
     listening_socket         = get_listening_socket()
     listening_socket_address = listening_socket.getsockname()
 
-    announce_url = decoded_torrent_file[b'announce-list'][1][0].decode()
     info_hash    = sha1(bencoder.bencode(info)).digest()
-    client       = Client(listening_socket, randint(1, 1 << 31 - 1), 
+    client       = Client(listening_socket, info_hash, randint(1, 1 << 31 - 1), 
                         randbytes(PEER_ID_SIZE), listening_socket_address[1], 
                         0, file_array.total_size, 0)
 
     tracker_type      = None
     tracker           = None
 
-
-    #ANNOUNCING
-    url_parse_object = urlparse(announce_url)
-
-    announce_response_dictionary = {}
-
-    tracker_url = url_parse_object.geturl()
-    print(tracker_url)
-
-    if(url_parse_object.scheme == 'http' or url_parse_object.scheme == 'https'):
-        tracker_type = 'http'
-        tracker = httprequest.HTTPRequest(tracker_url)
-        announce_response = tracker.announce(info_hash, client.peer_id, 
-                client.downloaded, client.left,
-                client.uploaded, client.port)
-        announce_decoder = Bdecoder(announce_response, "b")
-        announce_response_bdictionary = announce_decoder.decode()[0]
-        for key, value in announce_response_bdictionary.items():
-            if(key == b'peers'):
-                announce_response_dictionary[key.decode()] = value
-            else:
-                announce_response_dictionary[key.decode()] = int(value)
+    announce_list = None
+    if(b'announce-list' in decoded_torrent_file):
+        announce_list = decoded_torrent_file[b'announce-list']
     else:
-        tracker_type = 'udp'
-        tracker = udprequest.UDPRequest(tracker_url)
-        action, transaction_id, connection_id = tracker.connect(client.transaction_id)
-        key = randint(1, 1 << 31 - 1)
-        announce_response = tracker.announce(connection_id, client.transaction_id,
-                info_hash, client.peer_id, 
-                client.downloaded, client.left, 
-                client.uploaded, client.port, 
-                key)
-        print(announce_response)
-        announce_response_dictionary = dict(zip(udp_announce_response_names,
-                                                announce_response))
+        announce_list = [[decoded_torrent_file[b'announce']]]
 
-    print(announce_response_dictionary)
-    peer_address_list = parse_compact_peers(announce_response_dictionary["peers"])
+    peer_address_list = []
+    
+    while(not peer_address_list):
+        for tracker_url in announce_list:
+            print("trying tracker", tracker_url[0].decode())
+            try:
+                announce_response_dictionary = get_announce_response(tracker_url[0].decode(), client)
+            except :
+                continue
+            if("peers" in announce_response_dictionary):
+                peer_address_list += parse_compact_peers(announce_response_dictionary["peers"])
+                print("====>got list of peers from", tracker_url[0])
+            else:
+                print("Tracker", tracker_url[0].decode(), "gave 0 peers")
+
 
     piece_length = info[b'piece length']
     torrent_pieces = initialize_pieces(file_array.total_size, piece_length, info[b'pieces'])
@@ -247,11 +268,9 @@ def main(torrent_file, peer_limit):
     #torrent.torrent_status = TorrentStatus.STOPPED
         #create torrent object
         #TODO create listening thread
-        '''
     listening_thread = Thread(target=start_listening, args=(listening_socket,
                                         torrent, torrent_pieces, peer_threads))
     listening_thread.start()
-    '''
 
 
     '''
@@ -276,8 +295,8 @@ def main(torrent_file, peer_limit):
 
 
 if __name__ == "__main__":
-        torrent_file = ("./research/torrentfile/GOT.torrent")
-        main(torrent_file, 1)
+        torrent_file = ("./research/torrentfile/ubuntu-21.04-desktop-amd64.iso.torrent")
+        main(torrent_file, 20)
 
 
 

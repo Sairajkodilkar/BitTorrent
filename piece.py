@@ -31,13 +31,13 @@ class Pieces(list):
         bitfield = 0
         currentbit = 1
         for piece in self:
-            if piece._status == PieceStatus.COMPLETED:
+            if piece.get_status() == PieceStatus.COMPLETED:
                 bitfield = bitfield | currentbit 
             currentbit = currentbit << 1
-        total_pieces = len(self.pieces_list)
-        total_bytes = total_pieces / 8 + total_pieces % 8
+        total_pieces = len(self)
+        total_bytes = int(total_pieces // 8 + total_pieces % 8)
         bitfield_bytes = bitfield.to_bytes(total_bytes, "big")
-        return bitfield
+        return bitfield_bytes
 
 class Piece:
 

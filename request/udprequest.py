@@ -87,7 +87,7 @@ class UDPRequest:
         count = 0
         while(1):
             if(count > 8):
-                raise 
+                raise socket.timeout
             self.torrent_client_socket.settimeout(timeout)
             try:
                 print("waiting for server to respond...")

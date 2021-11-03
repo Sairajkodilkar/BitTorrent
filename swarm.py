@@ -69,6 +69,7 @@ def request_pieces(peer, torrent, keep_alive_scheduler, request_event):
         if(request_event.wait(REQUEST_EVENT_TIMEOUT) 
             and peer.i_am_interested and not peer.choked_me):
 
+            #print("requesting")
             request_rarest_piece(torrent, peer, keep_alive_scheduler)
             time.sleep(0.2)
     return
@@ -76,7 +77,7 @@ def request_pieces(peer, torrent, keep_alive_scheduler, request_event):
 def send_block(torrent, peer, index, begin, length):
     block = torrent.data_files.read_block(index, begin, length)
     try:
-        peer.send_block(message[1], message[2], block)
+        peer.send_block(index, begin, block)
     except ConnectionError:
         print("send block failed")
         peer.close()
@@ -100,7 +101,7 @@ def handle_peer(peer, torrent):
 
     torrent.data_sent = False
     peer.set_timeout(REQUEST_EVENT_TIMEOUT)
-    #print("handling peer")
+    print("handling peer")
 
     handshake_response = None
     try:
@@ -118,6 +119,11 @@ def handle_peer(peer, torrent):
         print("info hash did not matched")
         peer.close()
         return
+
+    bitfield = torrent.pieces.get_bitfield()
+    peer.send_bitfield(bitfield)
+    #TODO testing code, remove it
+    peer.choke(False)
 
     #print("sending interested")
     peer.interested(True)
@@ -147,6 +153,7 @@ def handle_peer(peer, torrent):
             print("socket timeout")
             #print("conn reset")
             peer.close()
+            break
 
         if(message[0] == -1):
             print("message -1")
@@ -173,13 +180,19 @@ def handle_peer(peer, torrent):
 
 
         elif(message[0] == ID.REQUEST):
-            if(peer.chocked or not peer.interested_in_me):
+            print("request arrived")
+            if(peer.choked or not peer.interested_in_me):
+                print("aborting 1")
                 continue
             if(message[3] > Piece.MAX_BLOCK_SIZE):
+                print("aborting 2")
                 continue
-            if(not torrent.pieces[message[1]].completed):
+            if(torrent.pieces[message[1]].get_status() != PieceStatus.COMPLETED):
+                print('aborting 3', torrent.pieces[message[1]].get_status())
                 continue
+            print("serving request")
             send_block(torrent, peer, message[1], message[2], message[3])
+            print("request served")
             torrent.data_sent = True
             cancel_all_events(keep_alive_scheduler)
 
@@ -224,5 +237,5 @@ def handle_peer(peer, torrent):
     cancel_all_events(keep_alive_scheduler)
     clear_pieces_status(peer, torrent)
     #print(torrent.pieces[0].status)
-    print("peer closed", peer.peer_sock.getpeername())
+    #print("peer closed", peer.peer_sock.getpeername())
     return

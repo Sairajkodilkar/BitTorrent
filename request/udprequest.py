@@ -5,6 +5,16 @@ import socket
 import struct
 
 
+UDP_ANNOUNCE_RESPONSE_NAMES = [
+    "action",
+    "transaction_id",
+    "interval",
+    "leechers",
+    "seeders",
+    "peers"
+]
+
+
 class TrackerTimeoutError(Exception):
 
     def __init__(self, *args, **kwargs):

@@ -134,7 +134,7 @@ class Peer:
         elif(response[0] == ID.NOT_INTERESTED):
             self.peer_state.interested = False
         elif(response[0] == ID.HAVE):
-            self.pieces[response[1]].piece_count += 1
+            self.pieces.add_piece(response[1])
         elif(response[0] == ID.BIT_FIELD):
             self.pieces.add_bitfield(response[1])
 

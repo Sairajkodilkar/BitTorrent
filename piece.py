@@ -21,11 +21,20 @@ class PieceDiscardingError(Exception):
 
 class Pieces(list):
 
+    def __init__(self):
+        self._total_completed_pieces = 0
+
+    @property
+    def total_completed_pieces(self):
+        return self._total_complete_pieces
+
     def add_bitfield(self, bitfield):
         bitfield_int = int.from_bytes(bitfield, "big")
         index = len(self) - 1
         while(bitfield_int):
             bit = bitfield_int & 0x01
+            if(self[index].piece_count == 0):
+                self._total_completed_pieces += 1
             self[index].piece_count += bit
             bitfield_int >>= 1
             index -= 1
@@ -42,6 +51,16 @@ class Pieces(list):
         total_bytes = int(total_pieces // 8 + total_pieces % 8)
         bitfield_bytes = bitfield.to_bytes(total_bytes, "big")
         return bitfield_bytes
+    
+    def add_piece(self, index):
+        if(self[index].piece_count == 0):
+            self._total_completed_pieces += 1
+        self[index].piece_count += 1
+        return
+
+    def is_complete(self):
+        return self._total_completed_pieces == len(self)
+
 
 
 class Piece:

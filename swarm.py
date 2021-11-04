@@ -184,8 +184,7 @@ def handle_peer(peer, torrent):
                 tpiece.discard_data()
 
         elif(message[0] == ID.HAVE):
-            torrent.pieces[message[1]].piece_count += 1
-            peer.pieces[message[1]].piece_count += 1
+            torrent.pieces.add_piece(message[1])
 
         elif(message[0] == ID.CANCEL):
             continue

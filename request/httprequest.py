@@ -1,5 +1,12 @@
 import requests
 
+HTTP_ANNOUNCE_RESPONSE_NAMES = [
+    "seeders",
+    "leechers",
+    "interval",
+    "peers"
+]
+
 
 class HTTPGetError(Exception):
 

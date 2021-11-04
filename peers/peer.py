@@ -44,15 +44,16 @@ import errno
 import time
 
 MAX_HANDSHAKE_LEN = 304
-HANDSHAKE_BUFFER_LEN = 1<<9 #its greater than the max size to have some buffer
+HANDSHAKE_BUFFER_LEN = 1 << 9  # its greater than the max size to have some buffer
 PEER_ID_SIZE = 20
+
 
 class PeerState:
 
     def __init__(self, choke=True, interested=False, connected=True):
-        self.choke      = choke
+        self.choke = choke
         self.interested = interested
-        self.connected  = connected #specify if peer close the connection
+        self.connected = connected  # specify if peer close the connection
 
 
 class Peer:
@@ -63,18 +64,18 @@ class Peer:
         self.peer_state = PeerState()
         self.my_state = PeerState()
 
-        self.start_time         = time.time()
+        self.start_time = time.time()
         self.keep_alive_timeout = 30
-        self.total_data_recvd   = 0
-        self.total_data_sent    = 0
+        self.total_data_recvd = 0
+        self.total_data_sent = 0
 
         self.pieces = Pieces(pieces)
-
+        return
 
     @property
     def choked(self):
         return self.peer_state.choke
-    
+
     @property
     def i_am_interested(self):
         return self.my_state.interested
@@ -95,18 +96,18 @@ class Peer:
         return self.peer_sock.fileno()
 
     def set_timeout(self, timeout):
-        self.peer_sock.settimeout(timeout)
+        return self.peer_sock.settimeout(timeout)
 
     def recv_all(self):
-        #recv first 4 bytes to determine the length
-        #The user should use try to see if pipe is broken or not
+        # recv first 4 bytes to determine the length
+        # The user should use try to see if pipe is broken or not
         packet = b''
         while(len(packet) < PacketFormat.INTEGER_SIZE):
-            packet += self.peer_sock.recv(PacketFormat.INTEGER_SIZE - len(packet))
+            packet += self.peer_sock.recv(
+                PacketFormat.INTEGER_SIZE - len(packet))
             self.last_recv_time = time.time()
 
         if(len(packet) < PacketFormat.INTEGER_SIZE):
-            print('return -1', packet)
             return (-1,)
 
         length = unpacketize_length(packet)[0]
@@ -124,9 +125,9 @@ class Peer:
 
     def decode_data(self, data):
         response = unpacketize_response(data)
-        if(response[0] == ID.CHOCK):
+        if(response[0] == ID.CHOKE):
             self.my_state.choke = True
-        elif(response[0] == ID.UNCHOCK):
+        elif(response[0] == ID.UNCHOKE):
             self.my_state.choke = False
         elif(response[0] == ID.INTERESTED):
             self.peer_state.interested = True
@@ -146,12 +147,14 @@ class Peer:
             self.peer_sock.close()
         self.last_send_time = time.time()
         self.total_data_sent += len(pkt_content)
+        return
 
-    def send_handshake(self, info_hash, peer_id, pstr=b"BitTorrent protocol",
-                request=True):
-        pkt_content = packetize_handshake(len(pstr), pstr, 0, info_hash,
-                                        peer_id)
-        print("sending", pkt_content)
+    def send_handshake(
+            self, info_hash, peer_id,
+            pstr=b"BitTorrent protocol", request=True):
+
+        pkt_content = packetize_handshake(
+            len(pstr), pstr, 0, info_hash, peer_id)
         try:
             self.send_packet(pkt_content)
         except ConnectionError:
@@ -159,27 +162,27 @@ class Peer:
 
         handshake_str_len_packet = None
         try:
-            handshake_str_len_packet = self.peer_sock.recv(PacketFormat.BYTE_SIZE)
+            handshake_str_len_packet = self.peer_sock.recv(
+                PacketFormat.BYTE_SIZE)
         except ConnectionError:
             self.close()
 
         if(not handshake_str_len_packet):
-            self.close() #peer must have closed the tcp connection
+            self.close()  # peer must have closed the tcp connection
             raise ConnectionError
 
-        print("str len", handshake_str_len_packet)
-        handshake_str_len = unpacketize_handshake_length(handshake_str_len_packet)[0]
+        handshake_str_len = unpacketize_handshake_length(
+            handshake_str_len_packet)[0]
         handshake_str_packet = self.peer_sock.recv(handshake_str_len)
-        print("str", handshake_str_packet)
         handshake_remaining = self.peer_sock.recv(48)
 
         handshake_response_packet = (handshake_str_len_packet +
-                                    handshake_str_packet + handshake_remaining)
+                                     handshake_str_packet + handshake_remaining)
 
-        print("remaining", handshake_remaining)
         handshake_response = unpacketize_handshake(handshake_response_packet)
         self.last_recv_time = time.time()
         self.total_data_sent += len(handshake_response_packet)
+
         return handshake_response
 
     def choke(self, status):
@@ -190,6 +193,7 @@ class Peer:
             pkt_content = packetize_unchoke()
         self.send_packet(pkt_content)
         self.peer_state.choke = status
+        return
 
     def interested(self, status):
         pkt_content = None
@@ -199,46 +203,51 @@ class Peer:
             pkt_content = packetize_notinterested()
         self.send_packet(pkt_content)
         self.my_state.interested = status
+        return
 
     def have(self, piece_index):
         pkt_content = packetize_have(piece_index)
         self.send_packet(pkt_content)
+        return
 
     def send_bitfield(self, bitfield):
-        print("bitfield sending")
         pkt_content = packetize_bitfield(bitfield)
-        print("making bitfield")
         self.send_packet(pkt_content)
-        print("bitfield sent")
+        return
 
     def request(self, index, begin, length):
         pkt_content = packetize_request(index, begin, length)
         self.send_packet(pkt_content)
+        return
 
     def send_block(self, index, begin, block):
         pkt_content = packetize_piece(index, begin, block)
         self.send_packet(pkt_content)
+        return
 
     def cancel(self, index, begin, length):
         pkt_content = packetize_cancel(index, begin, length)
         self.send_packet(pkt_content)
+        return
 
     def send_port(self, listen_port):
         pkt_content = packetize_port(listen_port)
         self.send_packet(pkt_content)
+        return
 
     def keep_alive(self):
-        print("sending keep alive")
         pkt_content = packetize_keepalive()
         self.send_packet(pkt_content)
+        return
 
     def close(self):
         self.peer_sock.close()
         self.my_state.connected = False
         self.peer_state.connected = False
+        return
 
     def get_download_speed(self):
-        time_interval =  time.time() - self.start_time
+        time_interval = time.time() - self.start_time
         download_speed = self.total_data_recvd / time_interval
         return download_speed
 
@@ -246,6 +255,3 @@ class Peer:
         time_interval = self.start_time - time.time()
         upload_speed = self.total_data_sent / time_interval
         return upload_speed
-
-
-

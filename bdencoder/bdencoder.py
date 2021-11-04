@@ -1,27 +1,20 @@
-'''
-6:string
-i3e l4:spam3:egge
-d3:cowi3ee
-'''
-
-import struct
-
 class BencodingError(Exception):
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
 
 class BdecodingError(Exception):
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
 
 class Token:
 
     INT_TYPE = b'i'
     STRING_TYPE = b's'
-    DICT_TYPE  = b'd'
+    DICT_TYPE = b'd'
     LIST_TYPE = b'l'
     END_TYPE = b'e'
     EOF_TYPE = b'f'
@@ -30,6 +23,7 @@ class Token:
         self.value = value
         self.type = ttype
         pass
+
 
 class Bdecoder:
 
@@ -43,7 +37,7 @@ class Bdecoder:
         self.typeof = typeof
         self.stringpointer = 0
 
-    def decode(self)->list:
+    def decode(self) -> list:
         bdecodingList = []
         while True:
             token = self.getnext()
@@ -62,34 +56,34 @@ class Bdecoder:
             return nbytes
 
     def getnext(self):
-            ch = self.getnbytes(1)
-            if(ch >= b'0' and ch <= b'9'):
-                digits = ch.decode()
-                while(True):
-                    ch = self.getnbytes(1)
-                    if(ch == b':'):
-                        break
-                    elif(not (ch >= b'0' and ch <= b'9')):
-                        raise BdecodingError("Expected Digit got {}".format(ch))
-                    digits += ch.decode()
-                strlen = int(digits)
-                string = self.readstring(strlen)
-                return Token(string, Token.STRING_TYPE)
-            elif(ch == Token.INT_TYPE):
-                integer = self.readinteger()
-                return Token(integer, Token.INT_TYPE)
-            elif(ch == Token.LIST_TYPE):
-                ll = self.readlist()
-                return Token(ll, Token.LIST_TYPE)
-            elif(ch == Token.DICT_TYPE):
-                dictionary = self.readdictionary()
-                return Token(dictionary, Token.DICT_TYPE)
-            elif(ch == Token.END_TYPE):
-                return Token(None, Token.END_TYPE)
-            elif(not ch):
-                return Token(None, Token.EOF_TYPE)
-            else:
-                raise BdecodingError(f"Unexpected Type specifier: {ord(ch)} {ch}")
+        ch = self.getnbytes(1)
+        if(ch >= b'0' and ch <= b'9'):
+            digits = ch.decode()
+            while(True):
+                ch = self.getnbytes(1)
+                if(ch == b':'):
+                    break
+                elif(not (ch >= b'0' and ch <= b'9')):
+                    raise BdecodingError("Expected Digit got {}".format(ch))
+                digits += ch.decode()
+            strlen = int(digits)
+            string = self.readstring(strlen)
+            return Token(string, Token.STRING_TYPE)
+        elif(ch == Token.INT_TYPE):
+            integer = self.readinteger()
+            return Token(integer, Token.INT_TYPE)
+        elif(ch == Token.LIST_TYPE):
+            ll = self.readlist()
+            return Token(ll, Token.LIST_TYPE)
+        elif(ch == Token.DICT_TYPE):
+            dictionary = self.readdictionary()
+            return Token(dictionary, Token.DICT_TYPE)
+        elif(ch == Token.END_TYPE):
+            return Token(None, Token.END_TYPE)
+        elif(not ch):
+            return Token(None, Token.EOF_TYPE)
+        else:
+            raise BdecodingError(f"Unexpected Type specifier: {ord(ch)} {ch}")
 
     def readstring(self, strlen):
         if(strlen < 0):
@@ -98,7 +92,7 @@ class Bdecoder:
         if(len(string) != strlen):
             raise BdecodingError("Bad String Encoding")
         return string
-    
+
     def readinteger(self):
         integerString = ''
         start = True
@@ -112,7 +106,8 @@ class Bdecoder:
                     break
             elif(not ch):
                 raise BdecodingError("Unexpected EOF")
-            elif(not (ch >= b'0' and ch <= b'9') and not (start and ch == b'-')):
+            elif(not (ch >= b'0' and ch <= b'9') and
+                    not (start and ch == b'-')):
                 raise BdecodingError("Unexpected character")
             elif(zeroFlag):
                 raise BdecodingError("Cannot have a digit after 0")
@@ -120,7 +115,7 @@ class Bdecoder:
                 zeroFlag = True
             start = False
             integerString += ch.decode()
-        return int(integerString) 
+        return int(integerString)
 
     def readdictionary(self):
         dictionary = {}
@@ -132,7 +127,8 @@ class Bdecoder:
                 break
             value = self.getnext()
             if(key.type == Token.END_TYPE):
-                raise BdecodingError("Dictionary Cannot have Empty value field")
+                raise BdecodingError(
+                    "Dictionary Cannot have Empty value field")
             dictionary[key.value] = value.value
         return dictionary
 
@@ -147,8 +143,9 @@ class Bdecoder:
             elementlist.append(element.value)
         return elementlist
 
+
 class Bencoder:
-    
+
     def bencode(self, value):
         bencoding = None
         if(isinstance(value, bytes)):
@@ -162,7 +159,7 @@ class Bencoder:
         else:
             raise BencodingError("Bad Object Type")
         return bencoding
-            
+
     def bencodestr(self, value):
         if(not isinstance(value, bytes)):
             raise BencodingError("Bad Object Type")
@@ -196,7 +193,3 @@ class Bencoder:
             bencoding += self.bencode(i)
         bencoding += Token.END_TYPE
         return bencoding
-
-
-
-

@@ -1,16 +1,16 @@
-from bittorrent.piece import *
 import errno
 import stat
 import os
 
+
 class File:
 
     flags = {
-            "+":os.O_RDWR,
-            "r":os.O_RDONLY,
-            "w":os.O_WRONLY,
-            "c":os.O_CREAT
-        }
+        "+": os.O_RDWR,
+        "r": os.O_RDONLY,
+        "w": os.O_WRONLY,
+        "c": os.O_CREAT
+    }
 
     permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 
@@ -18,29 +18,34 @@ class File:
         flag = 0
         for i in mode:
             flag |= self.flags[i]
-        self.fd = os.open(file_name, flag, self.permissions)
+        self._fd = os.open(file_name, flag, self.permissions)
+        return
 
     def write(self, byte_str):
-        return os.write(self.fd, byte_str)
-    
+        return os.write(self._fd, byte_str)
+
     def read(self, n):
-        return os.read(self.fd, n)
+        return os.read(self._fd, n)
 
     def seek(self, pos, how):
-        return os.lseek(self.fd, pos, how)
+        return os.lseek(self._fd, pos, how)
 
     def close(self):
-        return os.close(self.fd)
+        return os.close(self._fd)
+
 
 class FileArray:
 
-    #if files not none then name must belong to the directory
     def __init__(self, files, piece_length):
 
-        self.piece_length = piece_length
         self.file_streams = []
+        self._piece_length = piece_length
         self._create_directory_structure(files)
         self._open_files(files)
+
+    @property
+    def piece_length(self):
+        return self._piece_length
 
     def _create_directory(self, dirname):
         try:
@@ -63,16 +68,17 @@ class FileArray:
         for directory in directory_list:
             self._create_directory(directory_path + directory)
             directory_path += directory + '/'
-        return 
-                
+        return
+
     def _open_files(self, files):
-        #TODO handle condition when file exists
-        #In that case you have to verify the pieces in the files
+        # TODO handle condition when file exists
+        # In that case you have to verify the pieces in the files
         self.total_size = 0
         for file_name, file_length in files:
             self.total_size += file_length
             file_stream = File(file_name, "+c")
             self.file_streams.append((file_stream, file_length))
+        return
 
     def read_block(self, index, begin, length):
         #print("reading block")
@@ -88,8 +94,6 @@ class FileArray:
         return block
 
     def write_block(self, index, begin, block):
-        #write the piece to the file
-        #print("writing block", index)
         files = self.get_block_files(index, begin, len(block))
         offset = self.get_block_offset(index, begin)
         start = 0
@@ -101,8 +105,8 @@ class FileArray:
         return
 
     def get_block_offset(self, index, begin):
-        #get the offset of the block within the first file
-        block_start = (self.piece_length * index) + begin
+        # get the offset of the block within the first file
+        block_start = (self._piece_length * index) + begin
         file_start = 0
         for file, file_length in self.file_streams:
             file_end = file_start + file_length
@@ -112,12 +116,12 @@ class FileArray:
         return -1
 
     def get_block_files(self, index, begin, length):
-        #get the file streams associated with the block
-        block_start = (self.piece_length * index) + begin
-        block_end   = block_start + length
-        file_start  = 0
-        add_files   = False
-        files       = []
+        # get the file streams associated with the block
+        block_start = (self._piece_length * index) + begin
+        block_end = block_start + length
+        file_start = 0
+        add_files = False
+        files = []
 
         for file_stream, file_length in self.file_streams:
             file_end = file_start + file_length
@@ -135,7 +139,3 @@ class FileArray:
         for file_stream, file_length in self.file_streams:
             file_stream.close()
         return
-    
-        
-
-

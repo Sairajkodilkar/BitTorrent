@@ -62,7 +62,7 @@ class Torrent:
     def unchoke_top_peers(self, peer_limit=5):
         if(not self._unchoked_peers):
             tmp = []
-            for i in len(self.peers):
+            for i in range(len(self.peers)):
                 if(len(tmp) >= peer_limit):
                     break
                 if(self.peers[i].pieces.is_complete()):

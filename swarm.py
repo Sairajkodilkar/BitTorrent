@@ -12,9 +12,9 @@ import time
 
 # Note that these are 15 seconds smaller than the official time
 KEEP_ALIVE_DATA_TIME = 20
-KEEP_ALIVE_KEEP_TIME = 20
-REQUEST_EVENT_TIMEOUT = 30
+KEEP_ALIVE_KEEP_TIME = 105
 
+REQUEST_EVENT_TIMEOUT = 30
 
 def cancel_all_events(keep_alive_scheduler):
     for event in keep_alive_scheduler.queue:
@@ -172,6 +172,7 @@ def handle_peer(peer, torrent):
             cancel_all_events(keep_alive_scheduler)
 
         elif(message[0] == ID.PIECE):
+            #print("recving", message[1])
             if(torrent.pieces[message[1]].get_status() == PieceStatus.COMPLETED):
                 continue
             tpiece = torrent.pieces[message[1]]

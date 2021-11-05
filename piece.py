@@ -21,7 +21,8 @@ class PieceDiscardingError(Exception):
 
 class Pieces(list):
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._total_completed_pieces = 0
 
     @property
@@ -56,6 +57,7 @@ class Pieces(list):
         if(self[index].piece_count == 0):
             self._total_completed_pieces += 1
         self[index].piece_count += 1
+        self[index].set_status(PieceStatus.COMPLETED)
         return
 
     def is_complete(self):
@@ -83,6 +85,10 @@ class Piece:
         return self.piece_count < piece2.piece_count
 
     @property
+    def sha1(self):
+        return self._sha1
+
+    @property
     def data(self):
         return self._data
 
@@ -103,6 +109,7 @@ class Piece:
                 self._data = None
                 self._status = None
             else:
+                self.piece_count += 1
                 self._status = PieceStatus.COMPLETED
         return
 

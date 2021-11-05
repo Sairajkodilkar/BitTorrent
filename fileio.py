@@ -37,8 +37,8 @@ class File:
 class FileArray:
 
     def __init__(self, files, piece_length):
-
-        self.file_streams = []
+        self.file_streams  = []
+        self.total_size    = 0
         self._piece_length = piece_length
         self._create_directory_structure(files)
         self._open_files(files)

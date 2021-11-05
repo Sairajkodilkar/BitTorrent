@@ -32,14 +32,12 @@ def packetize_announce_req(connection_id, transaction_id, info_hash,
                            uploaded, port, key,
                            event, ip_address, num_want):
 
-    print(connection_id)
     pkt_content = [
         connection_id, Action.ANNOUNCE, transaction_id,
         info_hash, peer_id, downloaded,
         left, uploaded, event,
         ip_address, key, num_want, port
     ]
-    print(pkt_content)
     packet_structure = tuple(zip(pkt_content, ANNOUNCE_REQUEST_FORMAT))
 
     return make_pkt(packet_structure)

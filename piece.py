@@ -22,8 +22,8 @@ class PieceDiscardingError(Exception):
 class Pieces(list):
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self._total_completed_pieces = 0
+        super().__init__(*args, **kwargs)
 
     @property
     def total_completed_pieces(self):
@@ -34,7 +34,7 @@ class Pieces(list):
         index = len(self) - 1
         while(bitfield_int):
             bit = bitfield_int & 0x01
-            if(self[index].piece_count == 0):
+            if(self[index].piece_count == 0 and bit):
                 self._total_completed_pieces += 1
             self[index].piece_count += bit
             bitfield_int >>= 1

@@ -102,6 +102,7 @@ def handle_peer(peer, torrent):
     torrent.data_sent = False
     peer.set_timeout(REQUEST_EVENT_TIMEOUT)
 
+    print("handshake requested", peer.peer_sock.getpeername())
     handshake_response = None
     try:
         handshake_response = peer.send_handshake(
@@ -116,6 +117,7 @@ def handle_peer(peer, torrent):
     if(handshake_response[3] != torrent.info_hash):
         peer.close()
         return
+    print("handshake completed", peer.peer_sock.getpeername())
 
     bitfield = torrent.pieces.get_bitfield()
     peer.send_bitfield(bitfield)
@@ -141,7 +143,7 @@ def handle_peer(peer, torrent):
 
         try:
             message = peer.recv_all()
-        except (socket.timeout, ConnectionResetError, OSError):
+        except (socket.timeout, ConnectionResetError, OSError) as s:
             peer.close()
             break
 
@@ -172,7 +174,6 @@ def handle_peer(peer, torrent):
             cancel_all_events(keep_alive_scheduler)
 
         elif(message[0] == ID.PIECE):
-            #print("recving", message[1])
             if(torrent.pieces[message[1]].get_status() == PieceStatus.COMPLETED):
                 continue
             tpiece = torrent.pieces[message[1]]

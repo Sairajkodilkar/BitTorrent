@@ -60,6 +60,7 @@ class Peer:
 
     def __init__(self, socket, pieces):
         self.peer_sock = socket
+        self.peer_id   = None
 
         self.peer_state = PeerState()
         self.my_state = PeerState()
@@ -182,6 +183,7 @@ class Peer:
         handshake_response = unpacketize_handshake(handshake_response_packet)
         self.last_recv_time = time.time()
         self.total_data_sent += len(handshake_response_packet)
+        self.peer_id = handshake_response[4]
 
         return handshake_response
 
@@ -255,3 +257,6 @@ class Peer:
         time_interval = self.start_time - time.time()
         upload_speed = self.total_data_sent / time_interval
         return upload_speed
+
+    def __repr__(self):
+        return str(self.peer_id)

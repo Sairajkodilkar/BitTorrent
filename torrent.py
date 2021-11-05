@@ -25,6 +25,7 @@ class Torrent:
         self._info_hash      = info_hash
         self._status         = status
         self._unchoked_peers = []
+        self._seeders        = []
 
     def get_status(self):
         if(self._status == TorrentStatus.SEEDER
@@ -60,21 +61,31 @@ class Torrent:
             self._unchoked_peers.sort(key=Peer.get_upload_speed, reverse=True)
 
     def unchoke_top_peers(self, peer_limit=5):
+        # separate the seeder from the leechers
+        i = 0
+        while(True):
+            print("this is not it")
+            # FIXME: sometimes this goes in infinite loop
+            if(i >= len(self.peers)):
+                break
+            elif(self.peers[i].pieces.is_complete()):
+                seeder = self.peers.pop(i)
+                self._seeders.append(seeder)
+            elif(not self.peers[i].connected):
+                self.peers.pop(i)
+            else:
+                i += 1
+
         if(not self._unchoked_peers):
-            tmp = []
-            for i in range(len(self.peers)):
-                if(len(tmp) >= peer_limit):
-                    break
-                if(self.peers[i].pieces.is_complete()):
-                    continue
-                else:
-                    tmp.append(i)
-            for i in tmp:
-                peer = self.peers.pop(i)
-                self._unchoked_peers.append(peer)
+            while(self.peers and peer_limit):
+                print("unchoking")
+                peer = self.peers.pop(0)
                 peer.choke(False)
+                self._unchoked_peers.append(peer)
+                peer_limit -= 1
 
         elif(self.peers):
+            print("this is it")
             self._sort_unchoked_peers()
             slowest_peer = self._unchoked_peers.pop()
             slowest_peer.choke(True)

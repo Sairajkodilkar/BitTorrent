@@ -92,17 +92,16 @@ def send_have(torrent, peer):
 def send_scheduled_have(torrent, peer):
     have_scheduler = sched.scheduler(time.time, time.sleep)
     while(peer.connected):
-        have_scheduler.enter(15, 1, send_have, argument=(torrent, peer))
+        have_scheduler.enter(5, 1, send_have, argument=(torrent, peer))
         have_scheduler.run()
     return
 
 
-def handle_peer(peer, torrent):
+def handle_peer(peer, torrent, listener=False):
 
     torrent.data_sent = False
     peer.set_timeout(REQUEST_EVENT_TIMEOUT)
 
-    print("handshake requested", peer.peer_sock.getpeername())
     handshake_response = None
     try:
         handshake_response = peer.send_handshake(
@@ -110,17 +109,17 @@ def handle_peer(peer, torrent):
     except socket.timeout:
         peer.close()
         return
-    except ConnectionError:
+    except (ConnectionError, OSError):
         peer.close()
         return
 
     if(handshake_response[3] != torrent.info_hash):
         peer.close()
         return
-    print("handshake completed", peer.peer_sock.getpeername())
 
-    bitfield = torrent.pieces.get_bitfield()
-    peer.send_bitfield(bitfield)
+    if(listener):
+        bitfield = torrent.pieces.get_bitfield()
+        peer.send_bitfield(bitfield)
 
     peer.interested(True)
     keep_alive_scheduler = sched.scheduler(time.time, time.sleep)

@@ -6,6 +6,9 @@ from bittorrent.fileio import FileArray
 from bittorrent.swarm import handle_peer
 from bittorrent.parse import parse_compact_peers, parse_scrape_res
 from bittorrent.piece import Piece, Pieces, PieceStatus
+from bittorrent.user import display_status
+
+
 from random import randint, randbytes
 from urllib.parse import urlparse
 from threading import Thread
@@ -19,14 +22,15 @@ import sched
 import errno
 import socket
 LISTENING_PORT_START = 6881
-CONNECTION_TIMEOUT = 5
+CONNECTION_TIMEOUT = 1
 
 
 class Client:
 
     def __init__(self, listening_socket, info_hash,
                  transaction_id, peer_id, port,
-                 downloaded, left, uploaded):
+                 downloaded, left, uploaded,
+                 piece_count, seeding):
 
         self.listening_socket = listening_socket
         self.info_hash = info_hash
@@ -36,6 +40,8 @@ class Client:
         self.downloaded = downloaded
         self.left = left
         self.uploaded = uploaded
+        self.piece_count = piece_count
+        self.seeding = seeding
 
 
 def get_tcp_socket():
@@ -85,7 +91,7 @@ def get_listening_socket():
 def schedule_unchoke(torrent, peer_unchoke_limit):
     while(torrent.get_status() != TorrentStatus.STOPPED):
         peer_unchoking_scheduler = sched.scheduler(time.time, time.sleep)
-        peer_unchoking_scheduler.enter(60, 1, torrent.unchoke_top_peers,
+        peer_unchoking_scheduler.enter(30, 1, torrent.unchoke_top_peers,
                                         argument=(peer_unchoke_limit, ))
         peer_unchoking_scheduler.run()
     return
@@ -119,7 +125,7 @@ def start_listening(listening_socket, torrent, pieces, peer_threads):
         except socket.timeout:
             continue
         peer = Peer(conn, copy.deepcopy(pieces))
-        peer_thread = Thread(target=handle_peer, args=(peer, torrent))
+        peer_thread = Thread(target=handle_peer, args=(peer, torrent, True))
         peer_thread.start()
         peer_threads.append(peer_thread)
         torrent.peers.append(peer)
@@ -157,7 +163,7 @@ def get_announce_response(tracker_url, client):
                                              client.info_hash, client.peer_id,
                                              client.downloaded, client.left,
                                              client.uploaded, client.port,
-                                             key)
+                                             key, num_want=50)
         announce_response_dictionary = dict(zip(udprequest.UDP_ANNOUNCE_RESPONSE_NAMES,
                                                 announce_response))
     return announce_response_dictionary
@@ -178,13 +184,10 @@ def verify_file(file_array, torrent_pieces):
             continue
     return downloaded
 
-bps_to_kbps = lambda speed: speed / 10e3
-bps_to_mbps = lambda speed: speed / 10e6
-bps_to_gbps = lambda speed: speed / 10e9
-
 def main(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
         basedir='', clean_download=False, seeding=False):
     # Decoding the torrent files
+    print("Decoding torrent file...")
     bdecoder = Bdecoder(torrent_file, "f")
     bencoder = Bencoder()
 
@@ -213,10 +216,11 @@ def main(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
     downloaded = 0
 
     if(not clean_download):
+        print("Checking for Downloaded data...")
         downloaded = verify_file(file_array, torrent_pieces) 
     if(seeding and downloaded != file_array.total_size):
         print("Cant seed the torrent")
-        print("It may be Incomplete or Currupted")
+        print("It may be Incomplete or Currupted..")
         file_array.close_all()
         sys.exit(1)
 
@@ -232,16 +236,16 @@ def main(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
 
     uploaded = 0
 
+    piece_count = math.ceil(file_array.total_size / piece_length)
+
     # Globals
     listening_socket = get_listening_socket()
     listening_socket_address = listening_socket.getsockname()
     info_hash = sha1(bencoder.bencode(info)).digest()
     client = Client(listening_socket, info_hash, randint(1, 1 << 31 - 1),
                     randbytes(PEER_ID_SIZE), listening_socket_address[1],
-                    downloaded, left, uploaded)
-
-    # Get Peer list
-    announce_list = None
+                    downloaded, left, uploaded, piece_count, seeding)
+# Get Peer list announce_list = None
     if(b'announce-list' in decoded_torrent_file):
         announce_list = decoded_torrent_file[b'announce-list']
     else:
@@ -249,6 +253,7 @@ def main(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
 
     peer_address_list = []
 
+    print("Connecting to the tracker...")
     while(not peer_address_list):
         loops = 0
         for tracker_url in announce_list:
@@ -257,7 +262,7 @@ def main(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
                                             tracker_url[0].decode(), client)
             except:
                 continue
-            if(seeding):
+            if(client.seeding):
                 break
             if("peers" in announce_response_dictionary):
                 peer_address_list += parse_compact_peers(
@@ -266,7 +271,7 @@ def main(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
             else:
                 print("Tracker", tracker_url[0].decode(), "gave 0 peers")
 
-        if(seeding):
+        if(client.seeding):
             break
 
         #Try continuously till 5 loops and wait for 10 seconds 
@@ -274,13 +279,16 @@ def main(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
             loops = 0
             print("Tracker is not responding\n"
                   "Will try contacting tracker in 10 seconds")
-            sys.sleep(10)
+            time.sleep(10)
         loops += 1
+        time.sleep(2)
 
     # Generate the peer list
+    print("Connecting to the peers")
     peer_list = []
     for peer_address in peer_address_list:
-        if(seeding):
+        print("inside")
+        if(client.seeding):
             break
         if(not peer_connection_limit):
             break
@@ -301,16 +309,17 @@ def main(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
     torrent = Torrent(file_array, client.peer_id, peer_list, info_hash,
                       copy.deepcopy(torrent_pieces))
 
-    if(seeding):
+    if(client.seeding):
         torrent.set_status(TorrentStatus.SEEDER)
     # Create the thread for each peer
     peer_threads = []
+    print("Downloading torrent")
     for peer in peer_list:
         peer_thread = Thread(target=handle_peer, args=(peer, torrent))
         peer_thread.start()
         peer_threads.append(peer_thread)
 
-    #Wait for connection stabalization
+    #Wait for handshakes to complete 
     time.sleep(5)
     torrent.unchoke_top_peers(peer_unchoke_limit)
 
@@ -326,41 +335,15 @@ def main(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
                                                             peer_threads))
     listening_thread.start()
 
+    print("display")
     # User interface 
-    piece_count = math.ceil(file_array.total_size / piece_length)
+    #display_status(client, torrent, peer)
 
-    while(torrent.get_status() != TorrentStatus.STOPPED):
-        print(torrent._unchoked_peers)
-        '''
-        print("Completed %6.f/%6.f" % (torrent.get_completed_piece_count(),
-                                         piece_count))
-        for peer in ((torrent._unchoked_peers)):
-            print("Unchoked peer", peer.peer_id,
-                    bps_to_kbps(peer.get_download_speed()))
-
-        for peer in (torrent._seeders):
-            print("Seeders", peer.peer_id,
-                    bps_to_kbps(peer.get_download_speed()))
-
-        goback = "\033[" + str(len(torrent._seeders) +
-                len(torrent._unchoked_peers) + 2) + "A"
-
-        if(not seeding and torrent.get_status() == TorrentStatus.SEEDER):
-            yn = input("The torrent is completed now do you want to seed?")
-            if(yn[0] == 'y'):
-                seeding = True
-                continue
-            else:
-                torrent.set_status(TorrentStatus.STOPPED)
-
-        print(goback)
-        '''
-        time.sleep(0.5)
-
-    file_array.close_all()
+    #file_array.close_all()
 
 
+# TODO: create sig handler
 if __name__ == "__main__":
     torrent_file = (
-        "./research/torrentfile/manjaro-xfce.torrent")
-    main(torrent_file, 10)
+        "./research/torrentfile/ubuntu-21.04-desktop-amd64.iso.torrent")
+    main(torrent_file, 50)

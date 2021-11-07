@@ -2,6 +2,7 @@ from bittorrent.fileio import FileArray,File
 from bittorrent.piece import PieceStatus, Piece, Pieces
 from bittorrent.peers.peer import Peer
 from random import randint
+import time
 
 
 class TorrentStatus:
@@ -20,12 +21,25 @@ class Torrent:
         self.peers = peers
         self.pieces = pieces
 
+        self._start_time     = time.time()
         self._data_files     = data_files
         self._peer_id        = peer_id
         self._info_hash      = info_hash
         self._status         = status
         self._unchoked_peers = []
         self._seeders        = []
+
+    @property
+    def seeders(self):
+        return self._seeders
+
+    @property
+    def unchoked_peers(self):
+        return self._unchoked_peers
+
+    @property
+    def start_time(self):
+        return self._start_time
 
     def get_status(self):
         if(self._status == TorrentStatus.SEEDER
@@ -64,7 +78,6 @@ class Torrent:
         # separate the seeder from the leechers
         i = 0
         while(True):
-            print("this is not it")
             # FIXME: sometimes this goes in infinite loop
             if(i >= len(self.peers)):
                 break
@@ -76,25 +89,36 @@ class Torrent:
             else:
                 i += 1
 
+        i = 0
         if(not self._unchoked_peers):
-            while(self.peers and peer_limit):
-                print("unchoking")
-                peer = self.peers.pop(0)
-                peer.choke(False)
-                self._unchoked_peers.append(peer)
-                peer_limit -= 1
+            while(peer_limit):
+                if(i >= len(self.peers)):
+                    break
+                if(self.peers[i].interested_in_me):
+                    peer = self.peers.pop(i)
+                    peer.choke(False)
+                    self._unchoked_peers.append(peer)
+                    peer_limit -= 1
+                else:
+                    i += 1
 
         elif(self.peers):
-            print("this is it")
-            self._sort_unchoked_peers()
-            slowest_peer = self._unchoked_peers.pop()
-            slowest_peer.choke(True)
             # unchoke peers in cyclic manner 
             # this is achieved by appending unchoke peer at last 
-            peer = self.peers.pop(0)
-            peer.choke(False)
-            self.peers.append(slowest_peer)
-            self._unchoked_peers.append(peer)
+            while(True):
+                if(i >= len(self.peers)):
+                    break
+                if(not self.peers[i].interested_in_me):
+                    i += 1
+                    continue
+                self._sort_unchoked_peers()
+                slowest_peer = self._unchoked_peers.pop()
+                slowest_peer.choke(True)
+                peer = self.peers.pop(i)
+                peer.choke(False)
+                self.peers.append(slowest_peer)
+                self._unchoked_peers.append(peer)
+                break
         return
 
     def add_peers(self, peers):

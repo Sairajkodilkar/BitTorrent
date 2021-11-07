@@ -71,8 +71,6 @@ class FileArray:
         return
 
     def _open_files(self, files):
-        # TODO handle condition when file exists
-        # In that case you have to verify the pieces in the files
         self.total_size = 0
         for file_name, file_length in files:
             self.total_size += file_length
@@ -81,7 +79,6 @@ class FileArray:
         return
 
     def read_block(self, index, begin, length):
-        #print("reading block")
         block = b''
         files = self.get_block_files(index, begin, length)
         offset = self.get_block_offset(index, begin)
@@ -94,6 +91,8 @@ class FileArray:
         return block
 
     def write_block(self, index, begin, block):
+        if(block == None):
+            return
         files = self.get_block_files(index, begin, len(block))
         offset = self.get_block_offset(index, begin)
         start = 0

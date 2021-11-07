@@ -1,43 +1,3 @@
-'''
-Keepalives are generally sent once every two minutes, but note that timeouts can be done much more quickly when data is expected.
-Should I include timeout inside or outside
-Problems:
-    !!!!!The handshake for the peer is sending some reserved byte!!!!!  How to manage all the peers?  there must be one listening thread
-        Each peer must have its own thread?
-            -But main thread must be able to manage all the thread
-            -Main thread should be able to determine download rate and
-                determine to choke
-            -I might need to make subclass using the threading class and then
-                invoke the peer functions on it
-
-        On termination of peer connection the thread must also be closed
-        -How to determine if the connections is closed by peer
-        -Need to check the socket state every time.
-
-        I should also maintain the states for all the peers:
-            Is he chokeing/unchokeing me
-            Is he interested/not interested in me
-            Am I chokeing/unchokeing him
-            Am I interested/not interested in him
-
-    What exactly is the max block size?
-        There is conflict on this topic
-
-    How to manange all the pieces since they will come in block of small size?
-        There must be lock on the piece
-        If two client send same block then we must select which block write.
-        There must be global piece state
-
-    How to request blocks?
-        Should I request all of them to all the peers or should I request
-        different blocks to differnet peers
-
-    Thoughts on pipeline:
-        All the sending function will put the packets on the common queue and
-        queue will be emptied by a different thread
-
-'''
-
 from bittorrent.peers.packetization import *
 from bittorrent.piece import *
 import errno
@@ -59,8 +19,12 @@ class PeerState:
 class Peer:
 
     def __init__(self, socket, pieces):
-        self.peer_sock = socket
-        self.peer_id   = None
+        self._peer_sock = socket
+        try:
+            self._peer_address = socket.getpeername()
+        except OSError as ose:
+            self._peer_address = None
+        self._peer_id   = None
 
         self.peer_state = PeerState()
         self.my_state = PeerState()
@@ -72,6 +36,18 @@ class Peer:
 
         self.pieces = Pieces(pieces)
         return
+
+    @property
+    def peer_sock(self):
+        return self._peer_sock
+
+    @property
+    def peer_address(self):
+        return self._peer_address
+
+    @property
+    def peer_id(self):
+        return self._peer_id
 
     @property
     def choked(self):
@@ -165,7 +141,7 @@ class Peer:
         try:
             handshake_str_len_packet = self.peer_sock.recv(
                 PacketFormat.BYTE_SIZE)
-        except ConnectionError:
+        except (ConnectionError, OSError):
             self.close()
 
         if(not handshake_str_len_packet):
@@ -183,7 +159,7 @@ class Peer:
         handshake_response = unpacketize_handshake(handshake_response_packet)
         self.last_recv_time = time.time()
         self.total_data_sent += len(handshake_response_packet)
-        self.peer_id = handshake_response[4]
+        self._peer_id = handshake_response[4]
 
         return handshake_response
 
@@ -243,6 +219,7 @@ class Peer:
         return
 
     def close(self):
+        #print("closing the sock")
         self.peer_sock.close()
         self.my_state.connected = False
         self.peer_state.connected = False
@@ -254,9 +231,9 @@ class Peer:
         return download_speed
 
     def get_upload_speed(self):
-        time_interval = self.start_time - time.time()
+        time_interval = time.time() - self.start_time
         upload_speed = self.total_data_sent / time_interval
         return upload_speed
 
     def __repr__(self):
-        return str(self.peer_id)
+        return str(self.peer_address)

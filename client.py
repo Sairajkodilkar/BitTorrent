@@ -184,7 +184,7 @@ def verify_file(file_array, torrent_pieces):
             continue
     return downloaded
 
-def main(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
+def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
         basedir='', clean_download=False, seeding=False):
     # Decoding the torrent files
     print("Decoding torrent file...")
@@ -361,23 +361,14 @@ def main(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
     def signal_handler(signum, frame):
         torrent.set_status(TorrentStatus.STOPPED)
         cancel_all_events(peer_unchoking_scheduler)
+        print()
         print("Closing Torrent.. Wait few seconds")
-        
         return
 
-    #signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
 
-
-    print("display")
-    
     # User interface 
     display_status(client, torrent, peer)
 
-    #file_array.close_all()
+    file_array.close_all()
 
-
-# TODO: create sig handler
-if __name__ == "__main__":
-    torrent_file = (
-        "./research/torrentfile/ubuntu-21.04-desktop-amd64.iso.torrent")
-    main( torrent_file, 50)

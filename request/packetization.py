@@ -46,7 +46,6 @@ def packetize_announce_req(connection_id, transaction_id, info_hash,
 def packetize_scrap_req(connection_id, transaction_id, info_hash):
 
     pkt_content = [connection_id, Action.SCRAPE, transaction_id, info_hash]
-    print(pkt_content[0])
     packet_structure = tuple(zip(pkt_content, SCRAPE_REQEST_FORMAT))
 
     return make_pkt(packet_structure)

@@ -78,11 +78,8 @@ class Peer:
     def recv_all(self):
         # recv first 4 bytes to determine the length
         # The user should use try to see if pipe is broken or not
-        packet = b''
-        while(len(packet) < PacketFormat.INTEGER_SIZE):
-            packet += self.peer_sock.recv(
-                PacketFormat.INTEGER_SIZE - len(packet))
-            self.last_recv_time = time.time()
+        packet = self.recv_n(PacketFormat.INTEGER_SIZE)
+        self.last_recv_time = time.time()
 
         if(len(packet) < PacketFormat.INTEGER_SIZE):
             return (-1,)
@@ -91,9 +88,7 @@ class Peer:
         if(length == 0):
             return (ID.KEEP_ALIVE,)
 
-        data = self.peer_sock.recv(length)
-        while(len(data) < length):
-            data += self.peer_sock.recv(length - len(data))
+        data = self.recv_n(length)
 
         self.last_recv_time = time.time()
         self.total_data_recvd += len(data)
@@ -137,21 +132,18 @@ class Peer:
         except ConnectionError:
             self.close()
 
-        handshake_str_len_packet = None
-        try:
-            handshake_str_len_packet = self.peer_sock.recv(
-                PacketFormat.BYTE_SIZE)
-        except (ConnectionError, OSError):
-            self.close()
+        handshake_str_len_packet = self.recv_n(PacketFormat.BYTE_SIZE)
 
         if(not handshake_str_len_packet):
             self.close()  # peer must have closed the tcp connection
             raise ConnectionError
 
         handshake_str_len = unpacketize_handshake_length(
-            handshake_str_len_packet)[0]
-        handshake_str_packet = self.peer_sock.recv(handshake_str_len)
-        handshake_remaining = self.peer_sock.recv(48)
+                                                handshake_str_len_packet)[0]
+
+        handshake_str_packet = self.recv_n(handshake_str_len)
+
+        handshake_remaining = self.recv_n(48)
 
         handshake_response_packet = (handshake_str_len_packet +
                                      handshake_str_packet + handshake_remaining)
@@ -219,7 +211,6 @@ class Peer:
         return
 
     def close(self):
-        #print("closing the sock")
         self.peer_sock.close()
         self.my_state.connected = False
         self.peer_state.connected = False
@@ -234,6 +225,12 @@ class Peer:
         time_interval = time.time() - self.start_time
         upload_speed = self.total_data_sent / time_interval
         return upload_speed
+
+    def recv_n(self, n):
+        packet = b''
+        while(len(packet) < n):
+            packet += self.peer_sock.recv(n - len(packet))
+        return packet
 
     def __repr__(self):
         return str(self.peer_address)

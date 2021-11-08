@@ -16,9 +16,9 @@ KEEP_ALIVE_KEEP_TIME = 105
 
 REQUEST_EVENT_TIMEOUT = 30
 
-def cancel_all_events(keep_alive_scheduler):
-    for event in keep_alive_scheduler.queue:
-        keep_alive_scheduler.cancel(event)
+def cancel_all_events(scheduler):
+    for event in scheduler.queue:
+        scheduler.cancel(event)
     return
 
 
@@ -54,7 +54,7 @@ def request_rarest_piece(torrent, peer, keep_alive_scheduler):
 def clear_pieces_status(peer, torrent):
     for piece in peer.pieces:
         if (piece.get_status() != PieceStatus.COMPLETED
-                and torrent.pieces[piece.index].get_status() != PieceStatus.COMPLETED):
+            and torrent.pieces[piece.index].get_status() != PieceStatus.COMPLETED):
 
             piece.set_status(None)
             torrent.pieces[piece.index].set_status(None)
@@ -97,10 +97,14 @@ def send_scheduled_have(torrent, peer):
     return
 
 
-def handle_peer(peer, torrent, listener=False):
+def handle_peer(peer, torrent):
 
     torrent.data_sent = False
-    peer.set_timeout(REQUEST_EVENT_TIMEOUT)
+    try:
+        peer.set_timeout(REQUEST_EVENT_TIMEOUT)
+    except OSError:
+        peer.close()
+        return
 
     handshake_response = None
     try:
@@ -117,9 +121,8 @@ def handle_peer(peer, torrent, listener=False):
         peer.close()
         return
 
-    if(listener):
-        bitfield = torrent.pieces.get_bitfield()
-        peer.send_bitfield(bitfield)
+    bitfield = torrent.pieces.get_bitfield()
+    peer.send_bitfield(bitfield)
 
     peer.interested(True)
     keep_alive_scheduler = sched.scheduler(time.time, time.sleep)
@@ -207,4 +210,5 @@ def handle_peer(peer, torrent, listener=False):
 
     cancel_all_events(keep_alive_scheduler)
     clear_pieces_status(peer, torrent)
+    peer.close()
     return

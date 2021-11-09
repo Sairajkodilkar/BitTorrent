@@ -1,4 +1,4 @@
-from bittorrent.peers.packetization import ID
+from bittorrent.peers.packetization import ID, IndentityError
 from bittorrent.torrent import TorrentStatus
 from bittorrent.piece import Piece, PieceStatus
 
@@ -148,6 +148,8 @@ def handle_peer(peer, torrent):
         except (socket.timeout, ConnectionResetError, OSError) as s:
             peer.close()
             break
+        except IndentityError:
+            continue
 
         if(message[0] == -1):
             peer.close()

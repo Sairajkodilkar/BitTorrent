@@ -6,6 +6,7 @@ default:
 	@echo "usage:"
 	@echo "	make install 	:	install the bittorrent-cli"
 	@echo "	make uninstall	:	uninstall the bittorrent-cli"
+
 install:
 	pip install
 	cp $(APP) $(BIN_LOCATION)
@@ -13,5 +14,11 @@ install:
 
 uninstall:
 	pip uninstall bittorrent
-	rm -r $(BIN_LOCATION)/$(APP)
+	rm -f $(BIN_LOCATION)/$(APP)
 
+dev-install:
+	python3 setup.py develop
+
+dev-uninstall:
+	python3 setup.py 
+	setup.py develop --uninstall

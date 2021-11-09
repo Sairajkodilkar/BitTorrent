@@ -188,16 +188,18 @@ def verify_file(file_array, torrent_pieces):
 def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
              basedir='', clean_download=False, seeding=False):
     # Decoding the torrent files
-    print("Decoding torrent file...")
+    print("Decoding torrent file...", end='')
 
     bdecoder = Bdecoder(torrent_file, "f")
     bencoder = Bencoder()
+    print("Done")
 
     decoded_torrent_file = None
     try:
         decoded_torrent_file = bdecoder.decode()[0]
     except BdecodingError as bde:
         print(f"{torrent_file} is not a valid torrent file")
+        return
 
     info = decoded_torrent_file[b'info']
 
@@ -219,13 +221,13 @@ def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
     downloaded = 0
 
     if(not clean_download):
-        print("Checking for Downloaded data...")
-
+        print("Checking for Downloaded data...", end='')
         downloaded = verify_file(file_array, torrent_pieces)
+        print("Done")
+
     if(seeding and downloaded != file_array.total_size):
         print("Cant seed the torrent")
         print("It may be Incomplete or Currupted..")
-
         file_array.close_all()
         sys.exit(1)
 
@@ -260,7 +262,6 @@ def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
     peer_address_list = []
 
     print("Connecting to the tracker...")
-
     while(not peer_address_list):
         loops = 0
         for tracker_url in announce_list:
@@ -305,8 +306,7 @@ def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
             time.sleep(interval)
 
     # Generate the peer list
-    print("Connecting to the peers")
-
+    print("Connecting to peers",end='')
     peer_list = []
     for peer_address in peer_address_list:
         if(client.seeding):
@@ -324,6 +324,7 @@ def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
         peer_list.append(peer)
         peer_connection_limit -= 1
 
+    print(f"Connected to {len(peer_list)} peers")
     # Create the globally used torrent object
     # This object is use for communication across all the peers
     torrent = Torrent(file_array, client.peer_id, peer_list, info_hash,
@@ -331,12 +332,14 @@ def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
 
     if(client.seeding):
         torrent.set_status(TorrentStatus.SEEDER)
+
     # Create the thread for each peer
     peer_threads = []
-    print("Downloading torrent")
+    print("Downloading torrent, Press CTRL-C to Stop")
 
     for peer in peer_list:
         peer_thread = Thread(target=handle_peer, args=(peer, torrent))
+        peer_thread.setDaemon(True)
         peer_thread.start()
         peer_threads.append(peer_thread)
 
@@ -348,6 +351,7 @@ def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
     peer_unchoking_scheduler = sched.scheduler(time.time, time.sleep)
     scheduled_unchoke_thread = Thread(target=schedule_unchoke,
                                       args=(torrent, peer_unchoking_scheduler, peer_unchoke_limit))
+    scheduled_unchoke_thread.setDaemon(True)
     scheduled_unchoke_thread.start()
 
     # Start listening for the incoming connections
@@ -355,6 +359,7 @@ def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
                                                             torrent,
                                                             torrent_pieces,
                                                             peer_threads))
+    listening_thread.setDaemon(True)
     listening_thread.start()
 
     def signal_handler(signum, frame):

@@ -129,16 +129,19 @@ def handle_peer(peer, torrent):
 
     keep_alive_thread = Thread(target=send_scheduled_keep_alive,
                                args=(torrent, peer, keep_alive_scheduler))
+    keep_alive_thread.setDaemon(True)
     keep_alive_thread.start()
 
     request_event = Event()
     request_thread = Thread(target=request_pieces, args=(peer, torrent,
                                                          keep_alive_scheduler,
                                                          request_event))
+    request_thread.setDaemon(True)
     request_thread.start()
 
     send_scheduled_have_thread = Thread(
         target=send_scheduled_have, args=(torrent, peer))
+    send_scheduled_have_thread.setDaemon(True)
     send_scheduled_have_thread.start()
 
     while(peer.connected and torrent.get_status() != TorrentStatus.STOPPED):

@@ -64,7 +64,10 @@ class FileArray:
 
     def _create_nested_directory(self, directory_path):
         directory_list = directory_path.split('/')
-        directory_path = ''
+        if(directory_path[0] == '/'):
+            directory_path = '/'
+        else:
+            directory_path = ''
         for directory in directory_list:
             self._create_directory(directory_path + directory)
             directory_path += directory + '/'

@@ -178,7 +178,6 @@ def verify_file(file_array, torrent_pieces):
             break
         piece_sha1 = sha1(piece).digest()
         if(piece_sha1 == torrent_pieces[i].sha1):
-            print("matched the data", i)
             downloaded += len(torrent_pieces[i])
             torrent_pieces.add_piece(i)
         else:

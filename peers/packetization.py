@@ -31,6 +31,7 @@ class ID:
     CANCEL = 8
     PORT = 9
     KEEP_ALIVE = 10
+    EXTENDED = 20
 
 
 class IndentityError(Exception):
@@ -198,6 +199,9 @@ def unpacketize_response(packet):
 
     elif(identity == ID.PORT):
         response = decode_pkt(payload, PORT_FORMAT)
+
+    elif(identity == ID.EXTENDED):
+        response = decode_pkt(payload, EXTENDED_FORMAT)
 
     else:
         IndentityError("Wrong ID field in response")

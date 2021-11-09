@@ -193,6 +193,11 @@ def handle_peer(peer, torrent):
         elif(message[0] == ID.CANCEL):
             continue
 
+        elif(message[0] == ID.EXTENDED):
+            # ignore the bittorrent extension message as they are not useful
+            # now
+            continue
+
         elif(message[0] == ID.PORT):
             # useful in DHT
             pass

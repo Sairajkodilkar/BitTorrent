@@ -56,3 +56,7 @@ CANCEL_FORMAT = [
 PORT_FORMAT = [
     PacketFormat.SHORT # listen port //used in DHT
 ]
+
+EXTENDED_FORMAT = [
+        PacketFormat.TILL_END
+    ]

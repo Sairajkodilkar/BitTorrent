@@ -1,2 +1,0 @@
-Most of the new torrent uses Kademlia as a DHT 
-

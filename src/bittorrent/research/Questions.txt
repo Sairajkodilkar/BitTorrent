@@ -1,1 +1,0 @@
-1) Why torrent has SHA1 of only info field and not the entire file.

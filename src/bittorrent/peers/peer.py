@@ -123,10 +123,10 @@ class Peer:
 
     def send_handshake(
             self, info_hash, peer_id,
-            pstr=b"BitTorrent protocol", request=True):
+            pstr=b"BitTorrent protocol", reserved=0):
 
         pkt_content = packetize_handshake(
-            len(pstr), pstr, 0, info_hash, peer_id)
+            len(pstr), pstr, reserved, info_hash, peer_id)
         try:
             self.send_packet(pkt_content)
         except ConnectionError:

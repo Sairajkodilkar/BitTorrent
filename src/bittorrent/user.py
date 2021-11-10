@@ -21,10 +21,13 @@ def get_percentage_complete(downloaded_piece_count, total_piece_count):
 
 def display_status(client, torrent, peer):
 
+    total_hash_count = 40
     while(torrent.get_status() != TorrentStatus.STOPPED):
         if(not client.seeding and torrent.get_status() == TorrentStatus.SEEDER):
+            print("Completed 100.00%\t\t", end='')
+            print("[" + "#"*total_hash_count + "]")
             print("Torrent is completed now")
-            yn = print("Do you want to seed [y/n]?")
+            yn = input("Do you want to seed [y/n]?")
             if(yn[0] == 'y'):
                 client.seeding = True
                 continue
@@ -38,8 +41,7 @@ def display_status(client, torrent, peer):
                                     client.piece_count)
         print("Completed %5.2f%%\t\t" % percentage_complete, end='')
 
-        total_hash_count = 40
-        hash_count = int((percentage_complete * 25.0) / 100.0)        
+        hash_count = int((percentage_complete * total_hash_count) / 100.0)        
         print("[" + "#" * hash_count + '-' * (total_hash_count - hash_count) 
                 + "]\r", end='')
         time.sleep(0.5)

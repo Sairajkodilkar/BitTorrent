@@ -84,7 +84,7 @@ def send_block(torrent, peer, index, begin, length):
 def send_have(torrent, peer):
 
     for piece in torrent.pieces:
-        if(peer.pieces[piece.index].piece_count == 0):
+        if(piece.get_status() == PieceStatus.COMPLETED):
             peer.have(piece.index)
     return
 
@@ -109,7 +109,7 @@ def handle_peer(peer, torrent):
     handshake_response = None
     try:
         handshake_response = peer.send_handshake(
-            torrent.info_hash, torrent.peer_id)
+            torrent.info_hash, torrent.peer_id, reserved=0x0000000000000000)
     except socket.timeout:
         peer.close()
         return
@@ -161,6 +161,7 @@ def handle_peer(peer, torrent):
             request_event.clear()
 
         elif(message[0] == ID.UNCHOKE):
+            print("unchoked", peer.peer_address)
             request_event.set()
 
         elif(message[0] == ID.INTERESTED):
@@ -193,7 +194,8 @@ def handle_peer(peer, torrent):
                 tpiece.discard_data()
 
         elif(message[0] == ID.HAVE):
-            torrent.pieces.add_piece(message[1])
+            # this condition is already handled in the peer 
+            continue
 
         elif(message[0] == ID.CANCEL):
             continue

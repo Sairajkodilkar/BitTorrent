@@ -25,6 +25,13 @@ class Pieces(list):
         self._total_completed_pieces = 0
         super().__init__(*args, **kwargs)
 
+    def __copy__(self):
+        copy = Pieces()
+        for piece in self:
+            piece_copy = piece.__copy__()
+            copy.append(piece_copy)
+        return copy
+
     @property
     def total_completed_pieces(self):
         return self._total_complete_pieces
@@ -83,6 +90,10 @@ class Piece:
 
     def __lt__(self, piece2):
         return self.piece_count < piece2.piece_count
+
+    def __copy__(self):
+        return Piece(self.index, self._length, self.sha1, self.data,
+                self._status)
 
     @property
     def sha1(self):

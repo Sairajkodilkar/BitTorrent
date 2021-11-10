@@ -136,9 +136,7 @@ class Peer:
         except ConnectionError:
             self.close()
 
-        print("recving 1")
         handshake_str_len_packet = self.recv_n(PacketFormat.BYTE_SIZE)
-        print("recving 2")
 
         if(not handshake_str_len_packet):
             self.close()  # peer must have closed the tcp connection
@@ -147,11 +145,8 @@ class Peer:
         handshake_str_len = unpacketize_handshake_length(
                                                 handshake_str_len_packet)[0]
 
-        print("recving")
         handshake_str_packet = self.recv_n(handshake_str_len)
 
-        print("recving")
-        print(" iam the recver")
         handshake_remaining = self.recv_n(48)
 
         handshake_response_packet = (handshake_str_len_packet +
@@ -230,7 +225,6 @@ class Peer:
         return
 
     def close(self):
-        print('closing')
         self.peer_sock.close()
         self.my_state.connected = False
         self.peer_state.connected = False

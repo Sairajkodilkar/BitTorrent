@@ -44,7 +44,6 @@ def request_rarest_piece(torrent, peer, keep_alive_scheduler):
         if(rarest_piece.get_status() is None
                 and peer.pieces[rarest_piece.index].piece_count):
 
-            print("requesting pieces", rarest_piece.index)
             torrent.data_sent = True
             cancel_all_events(keep_alive_scheduler)
             rarest_piece.request(peer)
@@ -104,7 +103,6 @@ FAST_EXTENSION = 0x0000000000000004
 
 def handle_peer(peer, torrent):
 
-    print('peer handling')
     torrent.data_sent = False
     try:
         peer.set_timeout(REQUEST_EVENT_TIMEOUT)
@@ -114,7 +112,6 @@ def handle_peer(peer, torrent):
 
     handshake_response = None
     try:
-        print('sending handshake')
         handshake_response = peer.send_handshake(
             torrent.info_hash, torrent.peer_id, reserved=0)
     except socket.timeout:
@@ -125,7 +122,6 @@ def handle_peer(peer, torrent):
         return
 
 
-    print("handshake completed")
     if(handshake_response[3] != torrent.info_hash):
         peer.close()
         return
@@ -134,7 +130,6 @@ def handle_peer(peer, torrent):
     peer.send_bitfield(bitfield)
 
     peer.interested(True)
-    print("interested sent")
     keep_alive_scheduler = sched.scheduler(time.time, time.sleep)
 
     keep_alive_thread = Thread(target=send_scheduled_keep_alive,

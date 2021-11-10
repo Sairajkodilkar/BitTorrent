@@ -44,6 +44,7 @@ def request_rarest_piece(torrent, peer, keep_alive_scheduler):
         if(rarest_piece.get_status() is None
                 and peer.pieces[rarest_piece.index].piece_count):
 
+            print(request_pieces, rarest_piece.index)
             torrent.data_sent = True
             cancel_all_events(keep_alive_scheduler)
             rarest_piece.request(peer)

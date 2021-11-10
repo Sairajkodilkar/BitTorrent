@@ -181,6 +181,7 @@ def verify_file(file_array, torrent_pieces):
             downloaded += len(torrent_pieces[i])
             torrent_pieces.add_piece(i)
         else:
+            print("missing", i)
             continue
     return downloaded
 
@@ -218,6 +219,7 @@ def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
         file_array.total_size, piece_length, info[b'pieces'])
     peer_pieces = copy.deepcopy(torrent_pieces)
 
+
     print("Total Download size", file_array.total_size)
 
     downloaded = 0
@@ -227,6 +229,7 @@ def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
         downloaded = verify_file(file_array, torrent_pieces)
         print("Done")
 
+    print(torrent_pieces.is_complete())
     if(seeding and downloaded != file_array.total_size):
         print("Cant seed the torrent")
         print("It may be Incomplete or Currupted..")

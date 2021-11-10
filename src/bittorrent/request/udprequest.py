@@ -97,7 +97,6 @@ class UDPRequest:
         timeout = 15
         count = 0
         while(1):
-            print("stuck")
             if(count > 2):
                 raise socket.timeout
             self.torrent_client_socket.settimeout(timeout)

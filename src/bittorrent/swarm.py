@@ -44,10 +44,22 @@ def request_rarest_piece(torrent, peer, keep_alive_scheduler):
         if(rarest_piece.get_status() is None
                 and peer.pieces[rarest_piece.index].piece_count):
 
+            print("requesting pieces", rarest_piece.index)
             torrent.data_sent = True
             cancel_all_events(keep_alive_scheduler)
             rarest_piece.request(peer)
             return
+    return
+
+
+
+def request_pieces(peer, torrent, keep_alive_scheduler, request_event):
+    while(peer.connected and torrent.get_status() == TorrentStatus.LEECHER):
+        if(request_event.wait(REQUEST_EVENT_TIMEOUT)
+                and peer.i_am_interested and not peer.choked_me):
+
+            request_rarest_piece(torrent, peer, keep_alive_scheduler)
+            time.sleep(0.2)
     return
 
 
@@ -59,16 +71,6 @@ def clear_pieces_status(peer, torrent):
             piece.set_status(None)
             torrent.pieces[piece.index].set_status(None)
             torrent.pieces[piece.index].discard_data()
-    return
-
-
-def request_pieces(peer, torrent, keep_alive_scheduler, request_event):
-    while(peer.connected and torrent.get_status() == TorrentStatus.LEECHER):
-        if(request_event.wait(REQUEST_EVENT_TIMEOUT)
-                and peer.i_am_interested and not peer.choked_me):
-
-            request_rarest_piece(torrent, peer, keep_alive_scheduler)
-            time.sleep(0.2)
     return
 
 
@@ -84,7 +86,8 @@ def send_block(torrent, peer, index, begin, length):
 def send_have(torrent, peer):
 
     for piece in torrent.pieces:
-        if(piece.get_status() == PieceStatus.COMPLETED):
+        if(piece.get_status() == PieceStatus.COMPLETED and
+                peer.pieces[piece.index].get_status() != PieceStatus.COMPLETED):
             peer.have(piece.index)
     return
 
@@ -96,6 +99,8 @@ def send_scheduled_have(torrent, peer):
         have_scheduler.run()
     return
 
+EXTENDED = 0x0000000000100000
+FAST_EXTENSION = 0x0000000000000004
 
 def handle_peer(peer, torrent):
 
@@ -109,13 +114,15 @@ def handle_peer(peer, torrent):
     handshake_response = None
     try:
         handshake_response = peer.send_handshake(
-            torrent.info_hash, torrent.peer_id, reserved=0x0000000000000000)
+            torrent.info_hash, torrent.peer_id, reserved=0)
     except socket.timeout:
         peer.close()
         return
     except (ConnectionError, OSError):
         peer.close()
         return
+
+        peer.have_none()
 
     if(handshake_response[3] != torrent.info_hash):
         peer.close()
@@ -125,6 +132,7 @@ def handle_peer(peer, torrent):
     peer.send_bitfield(bitfield)
 
     peer.interested(True)
+    peer.my_state.interested = True
     keep_alive_scheduler = sched.scheduler(time.time, time.sleep)
 
     keep_alive_thread = Thread(target=send_scheduled_keep_alive,
@@ -155,13 +163,13 @@ def handle_peer(peer, torrent):
             continue
 
         if(message[0] == -1):
+            continue
             peer.close()
 
         elif(message[0] == ID.CHOKE):
             request_event.clear()
 
         elif(message[0] == ID.UNCHOKE):
-            print("unchoked", peer.peer_address)
             request_event.set()
 
         elif(message[0] == ID.INTERESTED):
@@ -169,6 +177,7 @@ def handle_peer(peer, torrent):
 
         elif(message[0] == ID.BIT_FIELD):
             torrent.pieces.add_bitfield(message[1])
+            print("got bitfield", peer.pieces.get_bitfield())
 
         elif(message[0] == ID.REQUEST):
             if(peer.choked or not peer.interested_in_me):
@@ -204,6 +213,10 @@ def handle_peer(peer, torrent):
             # ignore the bittorrent extension message as they are not useful
             # now
             continue
+
+        elif(message[0] == ID.HAVE_ALL):
+            peer.have_none()
+            continue 
 
         elif(message[0] == ID.PORT):
             # useful in DHT

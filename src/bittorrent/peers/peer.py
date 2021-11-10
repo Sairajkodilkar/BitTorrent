@@ -109,6 +109,10 @@ class Peer:
             self.pieces.add_piece(response[1])
         elif(response[0] == ID.BIT_FIELD):
             self.pieces.add_bitfield(response[1])
+        elif(response[0] == ID.HAVE_NONE):
+            self.pieces.have_all()
+        elif(response[0] == ID.HAVE_ALL):
+            self.pieces.have_none()
 
         return response
 
@@ -180,6 +184,16 @@ class Peer:
         self.send_packet(pkt_content)
         return
 
+    def have_all(self):
+        pkt_content = packetize_have_all()
+        self.send_packet(pkt_content)
+        return
+
+    def have_none(self):
+        pkt_content = packetize_have_none()
+        self.send_packet(pkt_content)
+        return
+
     def send_bitfield(self, bitfield):
         pkt_content = packetize_bitfield(bitfield)
         self.send_packet(pkt_content)
@@ -211,6 +225,7 @@ class Peer:
         return
 
     def close(self):
+        print('closing')
         self.peer_sock.close()
         self.my_state.connected = False
         self.peer_state.connected = False

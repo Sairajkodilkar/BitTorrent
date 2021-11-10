@@ -9,6 +9,8 @@ from bittorrent.peers.packetformat import *
 LENGHT_LEN = PacketFormat.INTEGER_SIZE
 HEADER_LEN = PacketFormat.BYTE_SIZE
 CHOKE_LEN = HEADER_LEN
+HAVE_ALL_LEN = HEADER_LEN
+HAVE_NONE_LEN = HEADER_LEN
 UNCHOKE_LEN = HEADER_LEN
 INTERESTED_LEN = HEADER_LEN
 NOTINTERESTED_LEN = HEADER_LEN
@@ -31,6 +33,10 @@ class ID:
     CANCEL = 8
     PORT = 9
     KEEP_ALIVE = 10
+    SUGGEST_PIECE = 13
+    HAVE_ALL = 14
+    HAVE_NONE = 15
+    REJECT_REQUEST = 16
     EXTENDED = 20
 
 
@@ -76,6 +82,16 @@ def packetize_choke():
 def packetize_unchoke():
 
     return packetize_header(UNCHOKE_LEN, ID.UNCHOKE)
+
+
+def packetize_have_all():
+
+    return packetize_header(HAVE_ALL_LEN, ID.HAVE_ALL)
+
+
+def packetize_have_none():
+
+    return packetize_header(HAVE_NONE_LEN, ID.HAVE_NONE)
 
 
 def packetize_interested():
@@ -177,30 +193,43 @@ def unpacketize_response(packet):
             or identity == ID.INTERESTED or identity == ID.NOT_INTERESTED):
         return (identity,)
 
-    if(len(unpacktized) != len(HEADER_FORMAT)):
-        return (-1,)
-
-    payload = unpacktized[1]
 
     if(identity == ID.HAVE):
+        payload = unpacktized[1]
         response = decode_pkt(payload, HAVE_FORMAT)
 
     elif(identity == ID.BIT_FIELD):
+        payload = unpacktized[1]
         response = decode_pkt(payload, BITFIELD_FORMAT)
 
     elif(identity == ID.REQUEST):
+        payload = unpacktized[1]
         response = decode_pkt(payload, REQUEST_FORMAT)
 
     elif(identity == ID.PIECE):
+        payload = unpacktized[1]
         response = decode_pkt(payload, PIECE_FORMAT)
 
     elif(identity == ID.CANCEL):
+        payload = unpacktized[1]
         response = decode_pkt(payload, CANCEL_FORMAT)
 
     elif(identity == ID.PORT):
+        payload = unpacktized[1]
         response = decode_pkt(payload, PORT_FORMAT)
 
+    elif(identity == ID.SUGGEST_PIECE):
+        payload = unpacktized[1]
+        response = decode_pkt(payload, SUGGEST_PIECE_FORMAT)
+
+    elif(identity == ID.HAVE_ALL):
+        response = (None,)
+
+    elif(identity == ID.HAVE_NONE):
+        response = (None,)
+
     elif(identity == ID.EXTENDED):
+        payload = unpacktized[1]
         response = decode_pkt(payload, EXTENDED_FORMAT)
 
     else:

@@ -234,7 +234,7 @@ def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
     left = file_array.total_size - downloaded
     if(left == 0):
         print("File is completely downloaded")
-        yn = print("Do you want to start seeding [y/n]?")
+        yn = input("Do you want to start seeding [y/n]?")
 
         if(yn[0] == 'y'):
             seeding = True
@@ -260,6 +260,7 @@ def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
         announce_list = [[decoded_torrent_file[b'announce']]]
 
     peer_address_list = []
+    #peer_address_list += [("91.121.79.173", 51413)]
 
     print("Connecting to the tracker...")
     while(not peer_address_list):

@@ -1,13 +1,13 @@
 from bittorrent.packet.packet import PacketFormat
 
 HANDSHAKE_LEN_FORMAT = [
-    PacketFormat.BYTE, # protocol string length //"BitTorrent protocol"
+    PacketFormat.BYTE, # protocol string length 
     -1
 ]
 
 HANDSHAKE_FORMAT = [
-    PacketFormat.BYTE,      # protocol string length //"BitTorrent protocol"
-    PacketFormat.STRING,    # protocol string
+    PacketFormat.BYTE,      # protocol string length 
+    PacketFormat.STRING,    # protocol string   //"BitTorrent protocol"
     PacketFormat.LONG_LONG, # reserved
     20,                     # Info Hash
     20                      # peer ID
@@ -28,6 +28,18 @@ HEADER_FORMAT = [
 ]
 
 HAVE_FORMAT = [
+    PacketFormat.INTEGER  # piece index
+]
+
+HAVE_ALL_FORMAT = [
+    PacketFormat.TILL_END 
+]
+
+HAVE_NONE_FORMAT = [
+    PacketFormat.TILL_END
+]
+
+SUGGEST_PIECE_FORMAT = [
     PacketFormat.INTEGER  # piece index
 ]
 
@@ -58,5 +70,6 @@ PORT_FORMAT = [
 ]
 
 EXTENDED_FORMAT = [
+        PacketFormat.UBYTE,
         PacketFormat.TILL_END
     ]

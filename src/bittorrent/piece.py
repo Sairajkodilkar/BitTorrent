@@ -37,26 +37,33 @@ class Pieces(list):
         return self._total_complete_pieces
 
     def add_bitfield(self, bitfield):
+        print(len(self))
         bitfield_int = int.from_bytes(bitfield, "big")
+        bitfield_int >>= len(bitfield) * 8 - len(self)
         index = len(self) - 1
         while(bitfield_int):
             bit = bitfield_int & 0x01
             if(self[index].piece_count == 0 and bit):
                 self._total_completed_pieces += 1
             self[index].piece_count += bit
+            print(bit, self[index].piece_count, index)
             bitfield_int >>= 1
             index -= 1
+        '''
+        for pieces in self:
+            print(pieces.index, pieces.piece_count)
+            '''
         return
 
     def get_bitfield(self):
         bitfield = 0
         currentbit = 1
         for piece in reversed(self):
-            if piece.get_status() == PieceStatus.COMPLETED:
+            if piece.piece_count > 0:
                 bitfield = bitfield | currentbit
             currentbit = currentbit << 1
         total_pieces = len(self)
-        total_bytes = int(total_pieces // 8 + total_pieces % 8)
+        total_bytes = int(total_pieces // 8) + ((total_pieces % 8) > 0)
         bitfield_bytes = bitfield.to_bytes(total_bytes, "big")
         return bitfield_bytes
     
@@ -65,6 +72,18 @@ class Pieces(list):
             self._total_completed_pieces += 1
         self[index].piece_count += 1
         self[index].set_status(PieceStatus.COMPLETED)
+        return
+
+    def have_all(self):
+        for i in len(self):
+            self.add_piece(i)
+        return
+
+    def have_none(self):
+        self._total_completed_pieces = 0
+        for piece in self:
+            piece.piece_count = 0
+            piece.set_status(None)
         return
 
     def is_complete(self):

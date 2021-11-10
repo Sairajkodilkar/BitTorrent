@@ -218,6 +218,8 @@ def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
         file_array.total_size, piece_length, info[b'pieces'])
     peer_pieces = copy.deepcopy(torrent_pieces)
 
+    print("Total Download size", file_array.total_size)
+
     downloaded = 0
 
     if(not clean_download):

@@ -37,7 +37,6 @@ class Pieces(list):
         return self._total_complete_pieces
 
     def add_bitfield(self, bitfield):
-        print(len(self))
         bitfield_int = int.from_bytes(bitfield, "big")
         bitfield_int >>= len(bitfield) * 8 - len(self)
         index = len(self) - 1
@@ -46,13 +45,8 @@ class Pieces(list):
             if(self[index].piece_count == 0 and bit):
                 self._total_completed_pieces += 1
             self[index].piece_count += bit
-            print(bit, self[index].piece_count, index)
             bitfield_int >>= 1
             index -= 1
-        '''
-        for pieces in self:
-            print(pieces.index, pieces.piece_count)
-            '''
         return
 
     def get_bitfield(self):

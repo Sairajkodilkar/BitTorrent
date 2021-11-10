@@ -104,6 +104,7 @@ FAST_EXTENSION = 0x0000000000000004
 
 def handle_peer(peer, torrent):
 
+    print('peer handling')
     torrent.data_sent = False
     try:
         peer.set_timeout(REQUEST_EVENT_TIMEOUT)
@@ -113,6 +114,7 @@ def handle_peer(peer, torrent):
 
     handshake_response = None
     try:
+        print('sending handshake')
         handshake_response = peer.send_handshake(
             torrent.info_hash, torrent.peer_id, reserved=0)
     except socket.timeout:
@@ -122,8 +124,8 @@ def handle_peer(peer, torrent):
         peer.close()
         return
 
-        peer.have_none()
 
+    print("handshake completed")
     if(handshake_response[3] != torrent.info_hash):
         peer.close()
         return
@@ -132,7 +134,7 @@ def handle_peer(peer, torrent):
     peer.send_bitfield(bitfield)
 
     peer.interested(True)
-    peer.my_state.interested = True
+    print("interested sent")
     keep_alive_scheduler = sched.scheduler(time.time, time.sleep)
 
     keep_alive_thread = Thread(target=send_scheduled_keep_alive,
@@ -177,7 +179,6 @@ def handle_peer(peer, torrent):
 
         elif(message[0] == ID.BIT_FIELD):
             torrent.pieces.add_bitfield(message[1])
-            print("got bitfield", peer.pieces.get_bitfield())
 
         elif(message[0] == ID.REQUEST):
             if(peer.choked or not peer.interested_in_me):

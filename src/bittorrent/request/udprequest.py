@@ -44,11 +44,8 @@ class UDPRequest:
     def connect(self, transaction_id):
 
         connection_req_packet = paketize_connection_req(transaction_id)
-        # TODO: take care of return value
         self.make_request(connection_req_packet)
 
-        # TODO: check action number
-        # TODO: check weather the packet is at least 16 bytes
         connection_res_packet, address = self.get_response()
         connection_res = unpaketize_response(connection_res_packet)
         return connection_res
@@ -64,28 +61,20 @@ class UDPRequest:
             uploaded, port, key,
             event, ip_address, num_want)
 
-        # TODO: take care of return value
         self.make_request(announce_req_packet)
-        # TODO: check action number
-        # TODO: check weather the packet is at least 20 bytes
         announce_res_packet, address = self.get_response()
         announce_res = unpaketize_response(announce_res_packet)
         return announce_res
 
     def scrape(self, connection_id, transaction_id, info_hash):
-        # TODO write scrape for multiple info_hash, possibly change
-        #       pktformatting
 
         scrape_req_packet = packetize_scrap_req(connection_id,
                                                 transaction_id,
                                                 info_hash)
 
-        # TODO: take care of return value
         self.make_request(scrape_req_packet)
 
-        # TODO: check weather the packet is at least 8 byte
         scrape_res_packet, address = self.get_response()
-        # TODO: check action number
         scrape_res = unpaketize_response(scrape_res_packet)
         return scrape_res
 
@@ -101,8 +90,6 @@ class UDPRequest:
                 raise socket.timeout
             self.torrent_client_socket.settimeout(timeout)
             try:
-                # FIXME 2048 might restrict the peer list so we have to recv
-                #       full msg(find a good hack)
                 res_packet, address = self.torrent_client_socket.recvfrom(2048)
             except socket.timeout:
                 raise

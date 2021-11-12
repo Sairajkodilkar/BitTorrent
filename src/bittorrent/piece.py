@@ -64,10 +64,6 @@ class Pieces(list):
     def add_piece(self, index):
         if(self[index].piece_count == 0):
             self._total_completed_pieces += 1
-            #print("added", index, self._total_completed_pieces)
-        else:
-            pass
-            #print("missed", index)
         self[index].piece_count += 1
         self[index].set_status(PieceStatus.COMPLETED)
         return

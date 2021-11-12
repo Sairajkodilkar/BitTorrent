@@ -1,4 +1,3 @@
-
 APP = bittorrent-cli
 BIN_LOCATION = ~/.local/bin
 
@@ -11,6 +10,8 @@ install:
 	pip install
 	cp $(APP) $(BIN_LOCATION)
 	chmod u+x $(BIN_LOCATION)/$(APP)
+	@echo "Installation Complete"
+	@echo "use bittorrent-cli to download"
 
 uninstall:
 	pip uninstall bittorrent
@@ -18,7 +19,10 @@ uninstall:
 
 dev-install:
 	python3 setup.py develop
+	chmod u+x $(APP)
+	@echo "Installation Complete"
+	@echo "use ./bittorrent-cli to download"
 
 dev-uninstall:
-	python3 setup.py 
-	setup.py develop --uninstall
+	python3 setup.py develop --uninstall
+	chmod u-x $(APP)

@@ -7,7 +7,7 @@ default:
 	@echo "	make uninstall	:	uninstall the bittorrent-cli"
 
 install:
-	pip install
+	pip install .
 	cp $(APP) $(BIN_LOCATION)
 	chmod u+x $(BIN_LOCATION)/$(APP)
 	@echo "Installation Complete"

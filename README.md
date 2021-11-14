@@ -111,6 +111,11 @@ Each peer object maintains the length of the data received from that peer. This
 information is used by the torrent object to unchoke the torrent by calculating
 download speed of the torrent.
 
+### Optimistic unchocking
+After some interval the unchoked peer with the least download speed is choked
+and the new peer from the peer list is unchoke, this peer is selected in round 
+robin fashion.
+
 
 ## File IO
 When peer completely recieves the piece it verifies the sha1 of that piece and

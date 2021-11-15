@@ -19,7 +19,7 @@ def get_percentage_complete(downloaded_piece_count, total_piece_count):
     return (downloaded_piece_count / total_piece_count) * 100
 
 
-def display_status(client, torrent, peer):
+def display_status(client, torrent):
 
     total_hash_count = 40
     while(torrent.get_status() != TorrentStatus.STOPPED):

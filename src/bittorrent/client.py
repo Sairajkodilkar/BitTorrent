@@ -376,6 +376,6 @@ def download(torrent_file, peer_connection_limit=20, peer_unchoke_limit=5,
     signal.signal(signal.SIGINT, signal_handler)
 
     # User interface
-    display_status(client, torrent, peer)
+    display_status(client, torrent)
 
     file_array.close_all()

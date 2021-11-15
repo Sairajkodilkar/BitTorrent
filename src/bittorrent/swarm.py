@@ -160,8 +160,8 @@ def handle_peer(peer, torrent):
             continue
 
         if(message[0] == -1):
-            continue
             peer.close()
+            continue
 
         elif(message[0] == ID.CHOKE):
             request_event.clear()
